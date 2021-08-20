@@ -1,11 +1,12 @@
+import ast
 import warnings
 import numpy as np
 import pandas as pd
 
-# import geopandas as gpd
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 from bokeh.plotting import figure, show
+from bokeh.core.properties import Instance, String
+from bokeh.models import ColumnDataSource, LayoutDOM
+from bokeh.util.compiler import TypeScript
 
 
 class WellTargeting:
@@ -133,34 +134,27 @@ class WellTargeting:
         else:
             warnings.warn('Check casing block')
 
-        self.plot_2d(self.r, self.z, self.split)
+        # self.plot_2d(self.r, self.z, self.split)
 
     def plot_2d(self, r, z, split):
-        self.fig = figure(title="Simple line example", x_axis_label='x', y_axis_label='y')
-
-        # self.fig = plt.figure(dpi=250)
-        # self.gs = GridSpec(4, 4, figure=self.fig)
-        # ax2D = self.fig.add_subplot(self.gs[:, 0])
+        # y-axis is reversed by reversing the axis range
+        self.fig2D = figure(title="2D Trajectory",
+                            x_axis_label='Horizontal Throw [m]',
+                            y_axis_label='Vert. Depth [m]',
+                            x_range=(-50, max(r) + 100),
+                            y_range=(max(z) + 100, -50 - self.Z))
 
         def plotter(r, z, c):
-            ax2D.plot(
+            self.fig2D.line(
                 r,
                 z,
-                c=c,
-                linewidth=3,
-                solid_capstyle='round',
+                color=c,
+                line_width=3
             )
 
-        plotter(r[:split+1], z[:split+1], 'k')
-        plotter(r[split:], z[split:], 'r')
-        self.fig.line(r, z, legend_label="Temp.", line_width=2)
-        ax2D.set_xlabel('Horizontal Throw [m]')
-        ax2D.set_ylabel('Vert. Depth [m]')
-        ax2D.set(
-            xlim=(-50, max(r) + 100),
-            ylim=(-50 - self.Z, max(z) + 100)
-        )
-        ax2D.invert_yaxis()
+        plotter(r[:split+1], z[:split+1], '#000000')
+        plotter(r[split:], z[split:], '#ff0000')
+        show(self.fig2D)
         hor, ver = ('lon', 'lat') if self.lon < 90 else ('X', 'Y')
         anno = (
             f'{hor} = {self.lon}\n{ver} = {self.lat}\nmMD = {self.mmd}\n'
@@ -179,51 +173,103 @@ class WellTargeting:
         #         facecolor='w', edgecolor='black', boxstyle='round,pad=1'
         #     ),
         # )
-        ax2D.grid(zorder=-1)
-        show(self.fig)
 
     def trajectory_3d(self):
 
-        def delta(r):
+        with open('vis.ts') as tsFile:
+            TS_CODE = tsFile.read()
 
-            delta_y = r / np.sqrt(self.tand(self.az)**2 + 1)
-            delta_x = delta_y * self.tand(self.az)
+        # This custom extension model will have a DOM view that should layout-able in
+        # Bokeh layouts, so use ``LayoutDOM`` as the base class. If you wanted to create
+        # a custom tool, you could inherit from ``Tool``, or from ``Glyph`` if you
+        # wanted to create a custom glyph, etc.
+        class Surface3d(LayoutDOM):
 
-            return delta_x, delta_y
+            # The special class attribute ``__implementation__`` should contain a string
+            # of JavaScript code that implements the browser side of the extension model.
+            __implementation__ = TypeScript(TS_CODE)
 
-        # fig = plt.figure(dpi=200)
-        # ax = plt.axes(projection='3d')
-        ax3D = self.fig.add_subplot(self.gs[:, 1:],projection='3d')
-        ax3D.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        ax3D.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        ax3D.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        x = self.lon + np.zeros(len(self.r))
-        y = self.lat + np.zeros(len(self.r))
-        m_to_deg = 1.11e5  # m to deg on Earth's surface
+            # Below are all the "properties" for this model. Bokeh properties are
+            # class attributes that define the fields (and their types) that can be
+            # communicated automatically between Python and the browser. Properties
+            # also support type validation. More information about properties in
+            # can be found here:
+            #
+            #    https://docs.bokeh.org/en/latest/docs/reference/core/properties.html#bokeh-core-properties
 
-        for i in range(len(self.z)):
-            # Accounting for special cases -> tand(az) = inf
-            if self.az == 90 or self.az == 270:
-                delta_y = 0
-                delta_x = self.r[-1]
-            else:
-                delta_x, delta_y = delta(self.r[i])
+            # This is a Bokeh ColumnDataSource that can be updated in the Bokeh
+            # server by Python code
+            data_source = Instance(ColumnDataSource)
 
-            delta_y /= m_to_deg
-            # m to deg is lat dependent for lon
-            delta_x *= self.cosd(self.lat) / m_to_deg
-            if self.az <= 90 or self.az > 270:
-                y[i] += delta_y
-                x[i] += delta_x
-            else:
-                y[i] -= delta_y
-                x[i] -= delta_x
+            # The vis.js library that we are wrapping expects data for x, y, and z.
+            # The data will actually be stored in the ColumnDataSource, but these
+            # properties let us specify the *name* of the column that should be
+            # used for each field.
+            x = String
+            y = String
+            z = String
 
-        ax3D.plot3D(x[:self.split+1], y[:self.split+1], self.z[:self.split+1], 'k')
-        ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
-        ax3D.set_box_aspect([1, 1, 1])
-        ax3D.invert_zaxis()
-        plt.show()
+
+        x = np.arange(0, 300, 10)
+        y = np.arange(0, 300, 10)
+        xx, yy = np.meshgrid(x, y)
+        xx = xx.ravel()
+        yy = yy.ravel()
+        value = np.sin(xx / 50) * np.cos(yy / 50) * 50 + 50
+
+        source = ColumnDataSource(data=dict(x=xx, y=yy, z=value))
+
+        surface = Surface3d(x="x", y="y", z="z", data_source=source)
+
+        show(surface)
+
+        # def delta(r):
+
+        #     delta_y = r / np.sqrt(self.tand(self.az)**2 + 1)
+        #     delta_x = delta_y * self.tand(self.az)
+
+        #     return delta_x, delta_y
+
+        # self.fig3D = px.scatter_3d(title="3D Trajectory",
+        #                     x_axis_label='Horizontal Throw [m]',
+        #                     y_axis_label='Vert. Depth [m]',
+        #                     x_range=(-50, max(r) + 100),
+        #                     y_range=(max(z) + 100, -50 - self.Z))
+        # # fig = plt.figure(dpi=200)
+        # # ax = plt.axes(projection='3d')
+        # # ax3D = self.fig.add_subplot(self.gs[:, 1:], projection='3d')
+        # # ax3D.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # # ax3D.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # # ax3D.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # x = self.lon + np.zeros(len(self.r))
+        # y = self.lat + np.zeros(len(self.r))
+        # m_to_deg = 1.11e5  # m to deg on Earth's surface
+
+        # for i in range(len(self.z)):
+        #     # Accounting for special cases -> tand(az) = inf
+        #     if self.az == 90 or self.az == 270:
+        #         delta_y = 0
+        #         delta_x = self.r[-1]
+        #     else:
+        #         delta_x, delta_y = delta(self.r[i])
+
+        #     delta_y /= m_to_deg
+        #     # m to deg is lat dependent for lon
+        #     delta_x *= self.cosd(self.lat) / m_to_deg
+        #     if self.az <= 90 or self.az > 270:
+        #         y[i] += delta_y
+        #         x[i] += delta_x
+        #     else:
+        #         y[i] -= delta_y
+        #         x[i] -= delta_x
+
+        # ax3D.plot3D(x[:self.split+1], y[:self.split+1],
+        #             self.z[:self.split+1], 'k')
+        # ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
+        # ax3D.set_box_aspect([1, 1, 1])
+        # ax3D.invert_zaxis()
+        # # plt.show()
+        # show(row(self.fig2D, self.fig3D))
 
 
 if __name__ == '__main__':
@@ -239,4 +285,4 @@ if __name__ == '__main__':
     )
 
     run.trajectory_2d()
-    # run.trajectory_3d()
+    run.trajectory_3d()
