@@ -2,6 +2,8 @@ import ast
 import warnings
 import numpy as np
 import pandas as pd
+from matplotlib import cm
+from scipy.interpolate import griddata
 
 from bokeh.plotting import figure, show
 from bokeh.core.properties import Instance, String
@@ -174,8 +176,7 @@ class WellTargeting:
         #     ),
         # )
 
-    def trajectory_3d(self):
-
+    def elevation(self):
         with open('vis.ts') as tsFile:
             TS_CODE = tsFile.read()
 
@@ -209,19 +210,25 @@ class WellTargeting:
             y = String
             z = String
 
+        df = pd.read_csv('data/Svartsengi.csv', index_col=0)
+        df.replace(to_replace=-9999.0, value=0, inplace=True)
+        x = df.x
+        y = df.y
+        z = df.value
 
-        x = np.arange(0, 300, 10)
-        y = np.arange(0, 300, 10)
-        xx, yy = np.meshgrid(x, y)
-        xx = xx.ravel()
-        yy = yy.ravel()
-        value = np.sin(xx / 50) * np.cos(yy / 50) * 50 + 50
+        # Create a 2D grid
+        mesh_resol = 100  # Increase/decrease for higher/lower resolution
+        xi = np.linspace(min(x), max(x), mesh_resol)
+        yi = np.linspace(min(y), max(y), mesh_resol)
+        X, Y = np.meshgrid(xi, yi)
+        # Interpolate to fit grid
+        Z = griddata(points=(x, y), values=z, xi=(X, Y), fill_value=0)
 
-        source = ColumnDataSource(data=dict(x=xx, y=yy, z=value))
-
+        source = ColumnDataSource(data=dict(x=X, y=Y, z=Z))
         surface = Surface3d(x="x", y="y", z="z", data_source=source)
-
         show(surface)
+
+    def trajectory_3d(self):
 
         # def delta(r):
 
