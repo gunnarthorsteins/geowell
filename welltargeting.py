@@ -136,7 +136,6 @@ class WellTargeting:
 
         self.plot_2d(self.r, self.z, self.split)
 
-
     def plot_2d(self, r, z, split):
         # y-axis is reversed by reversing the axis range
         self.fig2D = figure(title="2D Trajectory",
@@ -159,8 +158,6 @@ class WellTargeting:
         # plotter(r[:split+1], z[:split+1], '#000000')
         # plotter(r[split:], z[split:], '#ff0000')
         # show(self.fig2D)
-
-
 
     def elevation(self):
         with open('vis.ts') as tsFile:
@@ -319,11 +316,11 @@ class WellTargeting:
             #                             for (i = 0; i < f; i++) {
             #                                 fill_data['y'][i].push(data['y'][i]);
             #                                 fill_data['x'][i].push(data['x'][i]);
-            #                                 fill_data['z'][i].push(data['z'][i]);          
+            #                                 fill_data['z'][i].push(data['z'][i]);
             #                                 }
             #                             fill_source.trigger('change');
             #                             """)
-            # def update(attr, old, new): 
+            # def update(attr, old, new):
             #     pass
             #     # new_data = dict(
             #     #     r=self.r,
@@ -331,8 +328,7 @@ class WellTargeting:
             #     # )
             #     # self.source2D.data = new_data
 
-
-            slider.js_on_change('value', CustomJS(code= """
+            slider.js_on_change('value', CustomJS(code="""
                console.log('slider: value=' + this.value, this.toString())
              """))
             # print(title)
@@ -342,42 +338,42 @@ class WellTargeting:
         # def slider_input_handler(attr, old, new):
 
         lon = slider(param=self.lon,
-                          buffer=2000,
-                          step=10,
-                          title='X Coordinate')
+                     buffer=2000,
+                     step=10,
+                     title='X Coordinate')
         lat = slider(param=self.lat,
-                          buffer=2000,
-                          step=10,
-                          title='Y Coordinate')
+                     buffer=2000,
+                     step=10,
+                     title='Y Coordinate')
         cd = slider(param=1500,
-                         start=0,
-                         end=2500,
-                         step=10,
-                         title='Casing Depth')
+                    start=0,
+                    end=2500,
+                    step=10,
+                    title='Casing Depth')
         kop = slider(param=self.kop,
-                          start=0,
-                          end=self.mmd,
-                          step=0.5,
-                          title='Kick-Off')
+                     start=0,
+                     end=self.mmd,
+                     step=0.5,
+                     title='Kick-Off')
         mmd = slider(param=2500,
-                          start=0,
-                          end=2500+1000,
-                          step=10,
-                          title='Measured Depth')
+                     start=0,
+                     end=2500+1000,
+                     step=10,
+                     title='Measured Depth')
         Z = slider(param=self.Z,
-                        buffer=100,
-                        step=1,
-                        title='Well Head Elevation')
+                   buffer=100,
+                   step=1,
+                   title='Well Head Elevation')
         az = slider(param=self.az,
-                         start=0,
-                         end=359,
-                         step=5,
-                         title='Azimuth')
+                    start=0,
+                    end=359,
+                    step=5,
+                    title='Azimuth')
         bu = slider(param=self.bu,
-                         start=0,
-                         end=5,
-                         step=0.5,
-                         title='Build-Up')
+                    start=0,
+                    end=5,
+                    step=0.5,
+                    title='Build-Up')
 
         area = select()
         self.widgets = column(area, lon, lat, mmd, Z, az, cd, kop, bu)
