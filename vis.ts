@@ -4,6 +4,7 @@
 //
 // Making it easy to hook up python data analytics tools (NumPy, SciPy,
 // Pandas, etc.) to web presentations using the Bokeh server.
+// originially from the bokeh library, with modifications by repo's author
 
 import { LayoutDOM, LayoutDOMView } from "models/layouts/layout_dom"
 import { ColumnDataSource } from "models/sources/column_data_source"
