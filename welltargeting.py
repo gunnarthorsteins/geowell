@@ -6,8 +6,10 @@ from matplotlib import cm
 from scipy.interpolate import griddata
 
 from bokeh.plotting import figure, show
+from bokeh.layouts import gridplot, column
 from bokeh.core.properties import Instance, String
 from bokeh.models import ColumnDataSource, LayoutDOM
+from bokeh.models import CustomJS, Select, Slider
 from bokeh.util.compiler import TypeScript
 
 
@@ -28,8 +30,6 @@ class WellTargeting:
                             (measured from vertical)
         casing_depth:   Casing depth (m or ratio of mmd)
         bu:             Build-up from kick-off (degs per 100 ft)
-        mapping:        Choice of map to overlay:
-                        Thermal, RGB or Faults
 
     '''
 
@@ -43,8 +43,7 @@ class WellTargeting:
         kop=None,
         dip=20,
         cd=0,
-        bu=2,
-        mapping=None,
+        bu=2
     ):
 
         self.lon = lon
@@ -56,7 +55,6 @@ class WellTargeting:
         self.dip = dip
         self.cd = cd if cd > 1 else cd * self.mmd
         self.bu = bu / 30
-        self.mapping = mapping
 
         self.coord_sys = 'WGS84' if lat < 90 else 'ISN93'
 
@@ -136,7 +134,8 @@ class WellTargeting:
         else:
             warnings.warn('Check casing block')
 
-        # self.plot_2d(self.r, self.z, self.split)
+        self.plot_2d(self.r, self.z, self.split)
+
 
     def plot_2d(self, r, z, split):
         # y-axis is reversed by reversing the axis range
@@ -146,35 +145,22 @@ class WellTargeting:
                             x_range=(-50, max(r) + 100),
                             y_range=(max(z) + 100, -50 - self.Z))
 
-        def plotter(r, z, c):
-            self.fig2D.line(
-                r,
-                z,
-                color=c,
-                line_width=3
-            )
-
-        plotter(r[:split+1], z[:split+1], '#000000')
-        plotter(r[split:], z[split:], '#ff0000')
-        show(self.fig2D)
-        hor, ver = ('lon', 'lat') if self.lon < 90 else ('X', 'Y')
-        anno = (
-            f'{hor} = {self.lon}\n{ver} = {self.lat}\nmMD = {self.mmd}\n'
-            f'Z = {self.Z}\nKOP = {self.kop}\n'
-            f'az = {self.az}\nDip = {self.dip}\n'
-            f'CD = {self.cd}\nBU = {self.bu}'
-        )
-        # ax2D.text(
-        #     x=max(r) * 0.67,
-        #     y=50,
-        #     s=anno,
-        #     backgroundcolor='w',
-        #     verticalalignment='top',
-        #     linespacing=1,
-        #     bbox=dict(
-        #         facecolor='w', edgecolor='black', boxstyle='round,pad=1'
-        #     ),
+        # def plotter(r, z, c):
+        self.source2D = ColumnDataSource(data=dict(x=r, y=z))
+        self.fig2D.line(x='x', y='y', data_source=self.source2D)
+        # self.fig2D.line(
+        #     r,
+        #     z,
+        #     color=c,
+        #     line_width=3,
+        #     line_cap='round'
         # )
+
+        # plotter(r[:split+1], z[:split+1], '#000000')
+        # plotter(r[split:], z[split:], '#ff0000')
+        # show(self.fig2D)
+
+
 
     def elevation(self):
         with open('vis.ts') as tsFile:
@@ -224,65 +210,188 @@ class WellTargeting:
         # Interpolate to fit grid
         Z = griddata(points=(x, y), values=z, xi=(X, Y), fill_value=0)
 
-        source = ColumnDataSource(data=dict(x=X, y=Y, z=Z))
-        surface = Surface3d(x="x", y="y", z="z", data_source=source)
-        show(surface)
+        # For testing
+        # fig = plt.figure()
+        # ax = Axes3D(fig)
+        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,linewidth=1, antialiased=True)
+        # plt.show()
+
+        self.source3D = ColumnDataSource(data=dict(x=X, y=Y, z=Z))
+        self.elevation = Surface3d(
+            x='x', y='y', z='z', data_source=self.source3D)
 
     def trajectory_3d(self):
 
-        # def delta(r):
+        def delta(r):
 
-        #     delta_y = r / np.sqrt(self.tand(self.az)**2 + 1)
-        #     delta_x = delta_y * self.tand(self.az)
+            delta_y = r / np.sqrt(self.tand(self.az)**2 + 1)
+            delta_x = delta_y * self.tand(self.az)
 
-        #     return delta_x, delta_y
+            return delta_x, delta_y
 
-        # self.fig3D = px.scatter_3d(title="3D Trajectory",
-        #                     x_axis_label='Horizontal Throw [m]',
-        #                     y_axis_label='Vert. Depth [m]',
-        #                     x_range=(-50, max(r) + 100),
-        #                     y_range=(max(z) + 100, -50 - self.Z))
-        # # fig = plt.figure(dpi=200)
-        # # ax = plt.axes(projection='3d')
-        # # ax3D = self.fig.add_subplot(self.gs[:, 1:], projection='3d')
-        # # ax3D.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        # # ax3D.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        # # ax3D.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        # x = self.lon + np.zeros(len(self.r))
-        # y = self.lat + np.zeros(len(self.r))
-        # m_to_deg = 1.11e5  # m to deg on Earth's surface
+        self.fig3D = px.scatter_3d(title="3D Trajectory",
+                                   x_axis_label='Horizontal Throw [m]',
+                                   y_axis_label='Vert. Depth [m]',
+                                   x_range=(-50, max(r) + 100),
+                                   y_range=(max(z) + 100, -50 - self.Z))
+        # fig = plt.figure(dpi=200)
+        # ax = plt.axes(projection='3d')
+        # ax3D = self.fig.add_subplot(self.gs[:, 1:], projection='3d')
+        # ax3D.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # ax3D.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # ax3D.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        x = self.lon + np.zeros(len(self.r))
+        y = self.lat + np.zeros(len(self.r))
+        m_to_deg = 1.11e5  # m to deg on Earth's surface
 
-        # for i in range(len(self.z)):
-        #     # Accounting for special cases -> tand(az) = inf
-        #     if self.az == 90 or self.az == 270:
-        #         delta_y = 0
-        #         delta_x = self.r[-1]
-        #     else:
-        #         delta_x, delta_y = delta(self.r[i])
+        for i in range(len(self.z)):
+            # Accounting for special cases -> tand(az) = inf
+            if self.az == 90 or self.az == 270:
+                delta_y = 0
+                delta_x = self.r[-1]
+            else:
+                delta_x, delta_y = delta(self.r[i])
 
-        #     delta_y /= m_to_deg
-        #     # m to deg is lat dependent for lon
-        #     delta_x *= self.cosd(self.lat) / m_to_deg
-        #     if self.az <= 90 or self.az > 270:
-        #         y[i] += delta_y
-        #         x[i] += delta_x
-        #     else:
-        #         y[i] -= delta_y
-        #         x[i] -= delta_x
+            delta_y /= m_to_deg
+            # m to deg is lat dependent for lon
+            delta_x *= self.cosd(self.lat) / m_to_deg
+            if self.az <= 90 or self.az > 270:
+                y[i] += delta_y
+                x[i] += delta_x
+            else:
+                y[i] -= delta_y
+                x[i] -= delta_x
 
-        # ax3D.plot3D(x[:self.split+1], y[:self.split+1],
-        #             self.z[:self.split+1], 'k')
-        # ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
-        # ax3D.set_box_aspect([1, 1, 1])
-        # ax3D.invert_zaxis()
-        # # plt.show()
+        ax3D.plot3D(x[:self.split+1], y[:self.split+1],
+                    self.z[:self.split+1], 'k')
+        ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
+        ax3D.set_box_aspect([1, 1, 1])
+        ax3D.invert_zaxis()
+        # plt.show()
         # show(row(self.fig2D, self.fig3D))
+
+    def widgets(self):
+
+        def select():
+
+            areas = ['Svartsengi', 'Reykjanes', 'Hellisheidi',
+                     'Nesjavellir', 'Krafla', 'Theistareykir']
+
+            select = Select(title='Geothermal Area',
+                            value='Svartsengi', options=areas)
+            select.js_on_change("value", CustomJS(code="""
+                console.log('select: value=' + this.value, this.toString())"""))
+
+            return select
+
+        # TODO: Functionality
+
+        def slider(param, step, title, buffer=None, start=None, end=None):
+
+            if start is None:
+                start = param - buffer
+                end = param + buffer
+
+            slider = Slider(start=start,
+                            end=end,
+                            value=param,
+                            step=step,
+                            title=title)
+            # fill_source = ColumnDataSource(data=dict(x=[], y=[], z=[]))
+            # callback = CustomJS(args=dict(source=self.source), code="""
+            #     var data = source.data;
+            #     var f = cb_obj.value
+            #     var x = data['x']
+            #     var y = data['y']
+            #     var z = data['z']
+            #     for (var i = 0; i < x.length; i++) {
+            #         y[i] = Math.pow(x[i], f)
+            #     }
+            #     source.change.emit();
+            # """)
+            # callback = CustomJS(args=dict(source=self.source, fill_source=fill_source),
+            #                     code="""var data = source.data;
+            #                             var fill_data = fill_source.data;
+            #                             var f = cb_obj.value;
+            #                             fill_data['x']=[];
+            #                             fill_data['y']=[];
+            #                             fill_data['z']=[];
+            #                             for (i = 0; i < f; i++) {
+            #                                 fill_data['y'][i].push(data['y'][i]);
+            #                                 fill_data['x'][i].push(data['x'][i]);
+            #                                 fill_data['z'][i].push(data['z'][i]);          
+            #                                 }
+            #                             fill_source.trigger('change');
+            #                             """)
+            # def update(attr, old, new): 
+            #     pass
+            #     # new_data = dict(
+            #     #     r=self.r,
+            #     #     z=new
+            #     # )
+            #     # self.source2D.data = new_data
+
+
+            slider.js_on_change('value', CustomJS(code= """
+               console.log('slider: value=' + this.value, this.toString())
+             """))
+            # print(title)
+
+            return slider
+
+        # def slider_input_handler(attr, old, new):
+
+        lon = slider(param=self.lon,
+                          buffer=2000,
+                          step=10,
+                          title='X Coordinate')
+        lat = slider(param=self.lat,
+                          buffer=2000,
+                          step=10,
+                          title='Y Coordinate')
+        cd = slider(param=1500,
+                         start=0,
+                         end=2500,
+                         step=10,
+                         title='Casing Depth')
+        kop = slider(param=self.kop,
+                          start=0,
+                          end=self.mmd,
+                          step=0.5,
+                          title='Kick-Off')
+        mmd = slider(param=2500,
+                          start=0,
+                          end=2500+1000,
+                          step=10,
+                          title='Measured Depth')
+        Z = slider(param=self.Z,
+                        buffer=100,
+                        step=1,
+                        title='Well Head Elevation')
+        az = slider(param=self.az,
+                         start=0,
+                         end=359,
+                         step=5,
+                         title='Azimuth')
+        bu = slider(param=self.bu,
+                         start=0,
+                         end=5,
+                         step=0.5,
+                         title='Build-Up')
+
+        area = select()
+        self.widgets = column(area, lon, lat, mmd, Z, az, cd, kop, bu)
+
+    def present(self):
+        grid = gridplot([[self.fig2D, self.elevation], [
+            self.widgets]], sizing_mode='stretch_both')
+        show(grid)
 
 
 if __name__ == '__main__':
     run = WellTargeting(
-        lon=-22.7,
-        lat=63.4,
+        lon=333_000,
+        lat=376_000,
         mmd=2500,
         Z=20,
         az=30,
@@ -292,4 +401,7 @@ if __name__ == '__main__':
     )
 
     run.trajectory_2d()
-    run.trajectory_3d()
+    run.elevation()
+    run.widgets()
+    # run.trajectory_3d()
+    run.present()

@@ -26,11 +26,11 @@ declare namespace vis {
 const OPTIONS = {
     width: '600px',
     height: '600px',
-    style: 'surface',
+    style: 'grid',
     showPerspective: true,
     showGrid: true,
     keepAspectRatio: true,
-    verticalRatio: 1.0,
+    verticalRatio: 0.1,
     legendLabel: 'stuff',
     cameraPosition: {
         horizontal: -0.35,
