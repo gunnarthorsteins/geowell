@@ -225,23 +225,17 @@ class WellTargeting:
 
             return delta_x, delta_y
 
-        self.fig3D = px.scatter_3d(title="3D Trajectory",
-                                   x_axis_label='Horizontal Throw [m]',
-                                   y_axis_label='Vert. Depth [m]',
-                                   x_range=(-50, max(r) + 100),
-                                   y_range=(max(z) + 100, -50 - self.Z))
-
         x = self.lon + np.zeros(len(self.r))
         y = self.lat + np.zeros(len(self.r))
         m_to_deg = 1.11e5  # m to deg on Earth's surface
 
-        for i in range(len(self.z)):
+        for i, rr in enumerate(r):
             # Accounting for special cases -> tand(az) = inf
             if self.az == 90 or self.az == 270:
                 delta_y = 0
                 delta_x = self.r[-1]
             else:
-                delta_x, delta_y = delta(self.r[i])
+                delta_x, delta_y = delta(self.rr)
 
             delta_y /= m_to_deg
             # m to deg is lat dependent for lon
@@ -253,12 +247,18 @@ class WellTargeting:
                 y[i] -= delta_y
                 x[i] -= delta_x
 
+    def plot_3d(self):
+
+        self.fig3D = px.scatter_3d(title="3D Trajectory",
+                                   x_axis_label='Horizontal Throw [m]',
+                                   y_axis_label='Vert. Depth [m]',
+                                   x_range=(-50, max(r) + 100),
+                                   y_range=(max(z) + 100, -50 - self.Z))
         ax3D.plot3D(x[:self.split+1], y[:self.split+1],
                     self.z[:self.split+1], 'k')
         ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
         ax3D.set_box_aspect([1, 1, 1])
         ax3D.invert_zaxis()
-        # plt.show()
         # show(row(self.fig2D, self.fig3D))
 
     def widgets(self):
@@ -331,6 +331,7 @@ class WellTargeting:
 
         # def slider_input_handler(attr, old, new):
 
+        # TODO: This is awful. Should I load a json with the values?
         lon = slider(param=self.lon,
                      buffer=2000,
                      step=10,
