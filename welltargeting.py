@@ -1,4 +1,4 @@
-import ast
+import json
 import warnings
 import numpy as np
 import pandas as pd
@@ -11,6 +11,8 @@ from bokeh.core.properties import Instance, String
 from bokeh.models import ColumnDataSource, LayoutDOM
 from bokeh.models import CustomJS, Select, Slider
 from bokeh.util.compiler import TypeScript
+
+import plotting
 
 
 class WellTargeting:
@@ -48,15 +50,13 @@ class WellTargeting:
 
         self.lon = lon
         self.lat = lat
-        self.mmd = mmd if mmd > 10 else mmd * 1000
+        self.mmd = mmd
         self.Z = Z
         self.az = az
         self.kop = kop
         self.dip = dip
-        self.cd = cd if cd > 1 else cd * self.mmd
+        self.cd = cd
         self.bu = bu / 30
-
-        self.coord_sys = 'WGS84' if lat < 90 else 'ISN93'
 
     # TODO: Why did I do this?
     def __enter__(self):
@@ -144,21 +144,38 @@ class WellTargeting:
         self.r = np.concatenate((r1, r2, r3))
         self.z = np.concatenate((z1, z2, z3))
 
-    def plot_2d(self):
+    def trajectory_3d(self):
 
-        self.split_curve()
+        def delta(r):
 
-        # y-axis is reversed by reversing the axis range
-        self.fig2D = figure(title="2D Trajectory",
-                            x_axis_label='Horizontal Throw [m]',
-                            y_axis_label='Vert. Depth [m]',
-                            x_range=(-50, max(self.r) + 100),
-                            y_range=(max(self.z) + 100, -50 - self.Z))
+            delta_y = self.r / np.sqrt(self.tand(self.az)**2 + 1)
+            delta_x = delta_y * self.tand(self.az)
 
-        self.source2D = ColumnDataSource(data=dict(x=self.r, y=self.z))
-        self.fig2D.line(x='x', y='y', data_source=self.source2D)
+            return delta_x, delta_y
 
-    def elevation(self):
+        x = self.lon + np.zeros(len(self.r))
+        y = self.lat + np.zeros(len(self.r))
+        m_to_deg = 1.11e5  # m to deg on Earth's surface
+
+        for i, r in enumerate(self.r):
+            # Accounting for special cases -> tand(az) = inf
+            if self.az == 90 or self.az == 270:
+                delta_y = 0
+                delta_x = self.r[-1]
+            else:
+                delta_x, delta_y = delta(self.r)
+
+            delta_y /= m_to_deg
+            # m to deg is lat dependent for lon
+            delta_x *= self.cosd(self.lat) / m_to_deg
+            if self.az <= 90 or self.az > 270:
+                y[i] += delta_y
+                x[i] += delta_x
+            else:
+                y[i] -= delta_y
+                x[i] -= delta_x
+
+   def elevation(self):
         with open('vis.ts') as tsFile:
             TS_CODE = tsFile.read()
 
@@ -216,50 +233,6 @@ class WellTargeting:
         self.elevation = Surface3d(
             x='x', y='y', z='z', data_source=self.source3D)
 
-    def trajectory_3d(self):
-
-        def delta(r):
-
-            delta_y = r / np.sqrt(self.tand(self.az)**2 + 1)
-            delta_x = delta_y * self.tand(self.az)
-
-            return delta_x, delta_y
-
-        x = self.lon + np.zeros(len(self.r))
-        y = self.lat + np.zeros(len(self.r))
-        m_to_deg = 1.11e5  # m to deg on Earth's surface
-
-        for i, rr in enumerate(r):
-            # Accounting for special cases -> tand(az) = inf
-            if self.az == 90 or self.az == 270:
-                delta_y = 0
-                delta_x = self.r[-1]
-            else:
-                delta_x, delta_y = delta(self.rr)
-
-            delta_y /= m_to_deg
-            # m to deg is lat dependent for lon
-            delta_x *= self.cosd(self.lat) / m_to_deg
-            if self.az <= 90 or self.az > 270:
-                y[i] += delta_y
-                x[i] += delta_x
-            else:
-                y[i] -= delta_y
-                x[i] -= delta_x
-
-    def plot_3d(self):
-
-        self.fig3D = px.scatter_3d(title="3D Trajectory",
-                                   x_axis_label='Horizontal Throw [m]',
-                                   y_axis_label='Vert. Depth [m]',
-                                   x_range=(-50, max(r) + 100),
-                                   y_range=(max(z) + 100, -50 - self.Z))
-        ax3D.plot3D(x[:self.split+1], y[:self.split+1],
-                    self.z[:self.split+1], 'k')
-        ax3D.plot3D(x[self.split:], y[self.split:], self.z[self.split:], 'r')
-        ax3D.set_box_aspect([1, 1, 1])
-        ax3D.invert_zaxis()
-        # show(row(self.fig2D, self.fig3D))
 
     def widgets(self):
 
@@ -332,6 +305,7 @@ class WellTargeting:
         # def slider_input_handler(attr, old, new):
 
         # TODO: This is awful. Should I load a json with the values?
+        
         lon = slider(param=self.lon,
                      buffer=2000,
                      step=10,
@@ -380,15 +354,18 @@ class WellTargeting:
 
 
 if __name__ == '__main__':
+    with open('defaults.json') as json_file:
+        def_val = json.load(json_file)
+    
     run = WellTargeting(
-        lon=333_000,
-        lat=376_000,
-        mmd=2500,
-        Z=20,
-        az=30,
-        cd=1500,
-        kop=1000,
-        bu=1.5,
+        lon=def_val["lon"],
+        lat=def_val["lat"],
+        mmd=def_val["mmd"],
+        Z=def_val["Z"],
+        az=def_val["az"],
+        cd=def_val["cd"],
+        kop=def_val["kop"],
+        bu=def_val["bu"],
     )
 
     run.trajectory_2d()
