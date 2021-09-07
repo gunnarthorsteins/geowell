@@ -40,7 +40,7 @@ class WellTargeting:
         mmd,
         Z,
         az=0,
-        kop=None,
+        kop=False,
         dip=20,
         cd=0,
         bu=2
@@ -58,23 +58,42 @@ class WellTargeting:
 
         self.coord_sys = 'WGS84' if lat < 90 else 'ISN93'
 
+    # TODO: Why did I do this?
     def __enter__(self):
         return self
 
+    # TODO: Why did I do this?
     def __exit__(self, exc_type, exc_val, tb):
         pass
 
+    # TODO: Are these static methods the best way to do things?
     @staticmethod
     def cosd(deg):
         return np.cos(np.deg2rad(deg))
 
+    # TODO: Are these static methods the best way to do things?
     @staticmethod
     def sind(deg):
         return np.sin(np.deg2rad(deg))
 
+    # TODO: Are these static methods the best way to do things?
     @staticmethod
     def tand(deg):
         return np.tan(np.deg2rad(deg))
+
+    # TODO: Are these static methods the best way to do things?
+    @staticmethod
+    def split_curve(self):        # Determine casing TVD to split curve
+        """Splits the curve above/below casing for plot coloring"""
+
+        if self.cd <= self.kop:
+            self.split = sum(self.z < (self.cd - self.Z))
+        elif self.kop < self.cd < len_2[-1]:
+            self.split = 50 + sum(len_2 < (self.cd - self.Z))
+        elif len_2[-1] < self.cd:
+            self.split = 50 + len(z2) + sum(len_3 < (self.cd - self.Z))
+        else:
+            warnings.warn('Check casing block')
 
     def trajectory_2d(self):
         '''Three legs:
@@ -91,73 +110,53 @@ class WellTargeting:
 
             return r, z
 
-        # Directional
-        if self.kop != None:
-            # First leg
-            r1, z1 = first_leg()
-
-            # Second leg - The curved segment
-            r2 = np.zeros(self.dip - 1)
-            z2 = np.zeros(self.dip - 1)
-            z2[0] = z1[-1]
-            len_2 = np.zeros(self.dip - 1)
-            len_2[0] = z1[-1]
-            for i in range(1, self.dip - 1):
-                r2[i] = r2[i-1] + self.sind(i) / self.bu
-                z2[i] = z2[i-1] + self.cosd(i) / self.bu
-                len_2[i] = len_2[i-1] + 1 / self.bu
-
-            # Third leg - The last one
-            L2 = self.mmd - self.kop - self.dip / self.bu
-            r3 = np.linspace(
-                r2[-1], L2 * self.sind(self.dip)
-            )
-            vert = z2[-1] + np.linspace(0, L2 * self.cosd(self.dip))
-            p = np.polyfit(r3, vert, 1)
-            z3 = np.polyval(p, r3)
-            len_3 = z3 / self.cosd(self.dip)
-
-            self.r = np.concatenate((r1, r2, r3))
-            self.z = np.concatenate((z1, z2, z3))
-
         # Vertical
-        else:
+        if not self.kop:
             self.r, self.z = first_leg()
 
-        # Determine casing TVD to split curve
-        if self.cd <= self.kop:
-            self.split = sum(self.z < (self.cd - self.Z))
-        elif self.kop < self.cd and self.cd < len_2[-1]:
-            self.split = 50 + sum(len_2 < (self.cd - self.Z))
-        elif len_2[-1] < self.cd:
-            self.split = 50 + len(z2) + sum(len_3 < (self.cd - self.Z))
-        else:
-            warnings.warn('Check casing block')
+            return
 
-        self.plot_2d(self.r, self.z, self.split)
+        # Directional
+        # First leg
+        r1, z1 = first_leg()
 
-    def plot_2d(self, r, z, split):
+        # Second leg - The curved segment
+        r2 = np.zeros(self.dip - 1)
+        z2 = r2
+        len_2 = r2
+        z2[0] = z1[-1]
+        len_2[0] = z1[-1]
+        for i in range(1, self.dip - 1):
+            r2[i] = r2[i-1] + self.sind(i) / self.bu
+            z2[i] = z2[i-1] + self.cosd(i) / self.bu
+            len_2[i] = len_2[i-1] + 1 / self.bu
+
+        # Third leg - The last one
+        L2 = self.mmd - self.kop - self.dip / self.bu
+        r3 = np.linspace(
+            r2[-1], L2 * self.sind(self.dip)
+        )
+        vert = z2[-1] + np.linspace(0, L2 * self.cosd(self.dip))
+        p = np.polyfit(r3, vert, 1)
+        z3 = np.polyval(p, r3)
+        len_3 = z3 / self.cosd(self.dip)
+
+        self.r = np.concatenate((r1, r2, r3))
+        self.z = np.concatenate((z1, z2, z3))
+
+    def plot_2d(self):
+
+        self.split_curve()
+
         # y-axis is reversed by reversing the axis range
         self.fig2D = figure(title="2D Trajectory",
                             x_axis_label='Horizontal Throw [m]',
                             y_axis_label='Vert. Depth [m]',
-                            x_range=(-50, max(r) + 100),
-                            y_range=(max(z) + 100, -50 - self.Z))
+                            x_range=(-50, max(self.r) + 100),
+                            y_range=(max(self.z) + 100, -50 - self.Z))
 
-        # def plotter(r, z, c):
-        self.source2D = ColumnDataSource(data=dict(x=r, y=z))
+        self.source2D = ColumnDataSource(data=dict(x=self.r, y=self.z))
         self.fig2D.line(x='x', y='y', data_source=self.source2D)
-        # self.fig2D.line(
-        #     r,
-        #     z,
-        #     color=c,
-        #     line_width=3,
-        #     line_cap='round'
-        # )
-
-        # plotter(r[:split+1], z[:split+1], '#000000')
-        # plotter(r[split:], z[split:], '#ff0000')
-        # show(self.fig2D)
 
     def elevation(self):
         with open('vis.ts') as tsFile:
@@ -231,12 +230,7 @@ class WellTargeting:
                                    y_axis_label='Vert. Depth [m]',
                                    x_range=(-50, max(r) + 100),
                                    y_range=(max(z) + 100, -50 - self.Z))
-        # fig = plt.figure(dpi=200)
-        # ax = plt.axes(projection='3d')
-        # ax3D = self.fig.add_subplot(self.gs[:, 1:], projection='3d')
-        # ax3D.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        # ax3D.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-        # ax3D.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+
         x = self.lon + np.zeros(len(self.r))
         y = self.lat + np.zeros(len(self.r))
         m_to_deg = 1.11e5  # m to deg on Earth's surface
@@ -397,6 +391,7 @@ if __name__ == '__main__':
     )
 
     run.trajectory_2d()
+    run.plot_2d()
     run.elevation()
     run.widgets()
     # run.trajectory_3d()
