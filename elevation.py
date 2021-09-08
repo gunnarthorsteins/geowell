@@ -7,27 +7,43 @@ import pandas as pd
 import numpy as np
 
 from bokeh.models import ColumnDataSource, LayoutDOM
+from bokeh.core.properties import Instance, String
+from bokeh.models import ColumnDataSource, LayoutDOM
+from bokeh.util.compiler import TypeScript
 
 
 class Preprocess:
-    def __init__(self):
-        # with open('iceland.json') as json_file:
-        #     self.locations = json.load(json_file)
-        pass
+    def __init__(self, overwrite=False):
+        self.overwrite = overwrite
 
     def is_existant(self, dest_file):
+        if self.overwrite:
+            return False
         __is_exist = os.path.exists(dest_file)
         return __is_exist
 
-    def download(self):
-        """Downloads a raster map of Iceland"""
+    def reproject(self):
+        """The original file is in ESPG:8088 (ISN2016).
+        This method reprojects it to ESPG:3057 (ISN93)
+        """
+
+        raster = 'data/iceland.tif'
+        ds = gdal.Open(raster)
+        warp = gdal.Warp(raster, ds, dstSRS='EPSG:3057')
+
+    def download(self, resolution=20):
+        """Downloads a raster map of Iceland
+
+        params:
+            resolution - elevation resolution [m]. Can be either 10, 20 (default) or 50
+        """
 
         dest_file = 'data/iceland.tif'
         if self.is_existant(dest_file):
             return
 
         folder = 'https://ftp.lmi.is/gisdata/raster/'
-        url = f'{folder}IslandsDEMv1.0_50x50m_isn2016_daylight.tif'
+        url = f'{folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_daylight.tif'
         request = requests.get(url, stream=True)
         if request.status_code != 200:
             return
@@ -35,6 +51,8 @@ class Preprocess:
         with open(dest_file, 'wb') as f:
             for chunk in request.iter_content(1024):
                 f.write(chunk)
+
+        self.reproject()
 
     def clip(self, location, coordinates):
         """Clips the entire map into smaller, more manageble maps of each area"""
@@ -79,7 +97,7 @@ class Preprocess:
                       'y': y,
                       'value': flattened}
         df = pd.DataFrame(dictionary)
-        df.to_csv(f'data/{location}.csv')
+        df.to_csv(f'data/{location}.csv', index=False)
 
     def process(self):
 
@@ -87,7 +105,7 @@ class Preprocess:
             locations = json.load(json_file)
 
         for location, coordinates in locations.items():
-            self.clip(location, coordinates)
+            # self.clip(location, coordinates)
             self.tif_to_csv(location)
 
 
@@ -156,6 +174,6 @@ class Elevation:
 
 
 if __name__ == '__main__':
-    elev = Preprocess()
-    elev.download()
+    elev = Preprocess(overwrite=True)
+    # elev.download()
     elev.process()
