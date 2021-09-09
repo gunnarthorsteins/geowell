@@ -9,6 +9,8 @@ __pycache__/
 # tif files
 *.tif
 
+*.html
+
 # csv-files
 *.csv
 
