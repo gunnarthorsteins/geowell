@@ -1,3 +1,5 @@
+import numpy as np
+
 
 class Trajectory2d:
     def __init__(self):
@@ -83,6 +85,8 @@ class Trajectory2d:
 
 
 class Trajectory3d(Trajectory2d):
+    def __init__(self):
+        pass
 
 
     def trajectory_3d(self):
@@ -104,7 +108,7 @@ class Trajectory3d(Trajectory2d):
                 delta_y = 0
                 delta_x = self.r[-1]
             else:
-                delta_x, delta_y = delta(self.r)
+                delta_x, delta_y = delta(r)
 
             delta_y /= m_to_deg
             # m to deg is lat dependent for lon

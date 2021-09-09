@@ -1,21 +1,25 @@
 import os
 import json
-import scipy
+from scipy.interpolate import griddata
 import requests
 from osgeo import gdal
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm
+from mpl_toolkits.mplot3d import Axes3D
 
 from bokeh.models import ColumnDataSource, LayoutDOM
 from bokeh.core.properties import Instance, String
 from bokeh.models import ColumnDataSource, LayoutDOM
 from bokeh.util.compiler import TypeScript
+from bokeh.plotting import figure, show
 
 
 class Preprocess:
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
-        
+
         with open('locations.json') as json_file:
             self.locations = json.load(json_file)
 
@@ -77,6 +81,9 @@ class Preprocess:
         Args:
             location (str): The location name
         """
+        file = f'data/{location}.csv'
+        if os.path.exists(file):
+            return
 
         ds = gdal.Open(f'data/{location}.tif')
         geotransform = ds.GetGeoTransform()
@@ -104,6 +111,8 @@ class Preprocess:
         df.to_csv(f'data/{location}.csv', index=False)
 
     def run(self):
+        """Runs elevation data preprocessing."""
+
         if not os.path.exists('data/'):
             self.download()
             self.warp()
@@ -113,34 +122,37 @@ class Preprocess:
             self.tif_to_csv(location)
 
 
-class Elevation:
+class Surface:
     def __init__(self):
         pass
 
-    def elevation(self):
-        with open('vis.ts') as tsFile:
-            TS_CODE = tsFile.read()
+    def mesh(self, location):
 
-        # This custom extension model will have a DOM view that should layout-able in
-        # Bokeh layouts, so use ``LayoutDOM`` as the base class. If you wanted to create
-        # a custom tool, you could inherit from ``Tool``, or from ``Glyph`` if you
-        # wanted to create a custom glyph, etc.
+        df = pd.read_csv(f'data/{location}.csv')
+
+        # Create a 2D mesh grid
+        mesh_resol = 100  # Increase/decrease for higher/lower resolution
+        xi = np.linspace(min(df.x), max(df.x), mesh_resol)
+        yi = np.linspace(min(df.y), max(df.y), mesh_resol)
+        self.X, self.Y = np.meshgrid(xi, yi)
+        # Interpolate to fit grid
+        self.Z = griddata(
+            points=(df.x, df.y), values=df.value, xi=(self.X, self.Y), fill_value=0)
+        self.source3D = ColumnDataSource(
+            data=dict(x=self.X, y=self.Y, z=self.Z))
+
+    def test(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(self.X, self.Y, self.Z, rstride=1, cstride=1,
+                        cmap=matplotlib.cm.jet, linewidth=1, antialiased=True)
+        fig.show()
+
+    def javascript(self):
         class Surface3d(LayoutDOM):
-
-            # The special class attribute ``__implementation__`` should contain a string
-            # of JavaScript code that implements the browser side of the extension model.
+            with open('vis.ts') as tsFile:
+                TS_CODE = tsFile.read()
             __implementation__ = TypeScript(TS_CODE)
-
-            # Below are all the "properties" for this model. Bokeh properties are
-            # class attributes that define the fields (and their types) that can be
-            # communicated automatically between Python and the browser. Properties
-            # also support type validation. More information about properties in
-            # can be found here:
-            #
-            #    https://docs.bokeh.org/en/latest/docs/reference/core/properties.html#bokeh-core-properties
-
-            # This is a Bokeh ColumnDataSource that can be updated in the Bokeh
-            # server by Python code
             data_source = Instance(ColumnDataSource)
 
             # The vis.js library that we are wrapping expects data for x, y, and z.
@@ -151,32 +163,18 @@ class Elevation:
             y = String
             z = String
 
-        df = pd.read_csv('data/Svartsengi.csv', index_col=0)
-        df.replace(to_replace=-9999.0, value=0, inplace=True)
-        x = df.x
-        y = df.y
-        z = df.value
-
-        # Create a 2D grid
-        mesh_resol = 100  # Increase/decrease for higher/lower resolution
-        xi = np.linspace(min(x), max(x), mesh_resol)
-        yi = np.linspace(min(y), max(y), mesh_resol)
-        X, Y = np.meshgrid(xi, yi)
-        # Interpolate to fit grid
-        Z = scipy.interpolate.griddata(
-            points=(x, y), values=z, xi=(X, Y), fill_value=0)
-
-        # For testing
-        # fig = plt.figure()
-        # ax = Axes3D(fig)
-        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,linewidth=1, antialiased=True)
-        # plt.show()
-
-        self.source3D = ColumnDataSource(data=dict(x=X, y=Y, z=Z))
-        self.elevation = Surface3d(
+        surface = Surface3d(
             x='x', y='y', z='z', data_source=self.source3D)
+        show(surface)  # saves the figure as elevation.html
+
+    def run(self):
+        location = 'Svartsengi'
+        self.mesh(location)
+        self.javascript()
 
 
 if __name__ == '__main__':
     preprocessing = Preprocess(overwrite=False)
     preprocessing.run()
+    surface = Surface()
+    surface.run()
