@@ -15,6 +15,9 @@ from bokeh.util.compiler import TypeScript
 class Preprocess:
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
+        
+        with open('locations.json') as json_file:
+            self.locations = json.load(json_file)
 
     def download(self, resolution=20):
         """Downloads a raster map of Iceland from The National Land Survey of Iceland
@@ -38,9 +41,7 @@ class Preprocess:
                 f.write(chunk)
 
     def warp(self):
-        """The original file is in ESPG:8088 (ISN2016).
-        This method warps it to ESPG:3057 (ISN93)
-        """
+        """Warps the original file from ESPG:8088 (ISN2016) to ESPG:3057 (ISN93)"""
 
         raster = 'data/iceland.tif'
         ds = gdal.Open(raster)
@@ -71,7 +72,11 @@ class Preprocess:
         ds = None
 
     def tif_to_csv(self, location):
-        """Converts geotiff to csv for plotting 3d mesh in bokeh"""
+        """Converts geotiff to csv for plotting 3d mesh in bokeh
+
+        Args:
+            location (str): The location name
+        """
 
         ds = gdal.Open(f'data/{location}.tif')
         geotransform = ds.GetGeoTransform()
@@ -103,10 +108,7 @@ class Preprocess:
             self.download()
             self.warp()
 
-        with open('locations.json') as json_file:
-            locations = json.load(json_file)
-
-        for location, coordinates in locations.items():
+        for location, coordinates in self.locations.items():
             self.clip(location, coordinates)
             self.tif_to_csv(location)
 
