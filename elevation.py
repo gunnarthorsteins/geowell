@@ -61,6 +61,8 @@ class Process:
     def __init__(self, location, coordinates, overwrite=False):
         """
         Args:
+            location (str): Location name, see data/locations.json
+            coordinates (dict): Location bounding box, see data/locations.json
             overwrite (bool, optional): Whether to overwrite existing surface
                                         data or not. Defaults to False.
         """
@@ -91,26 +93,26 @@ class Process:
         ds = None
 
     def detiffify(self):
-        """Converts geotiff to csv.
+        """Converts geotiff to df.
 
         Args:
             location (str): The location name
         """
 
-        ds = gdal.Open(f'data/{self.location}.tif')
-        xyz = gdal.Translate(f'data/{self.location}.xyz', ds)
+        file_loc = f'data/{self.location}'
+        ds = gdal.Open(f'{file_loc}.tif')
+        xyz = gdal.Translate(f'{file_loc}.xyz', ds)
         xyz = None
         ds = None
 
-        df = pd.read_csv(f'data/{self.location}.xyz',
+        df = pd.read_csv(f'{file_loc}.xyz',
                          sep=' ',
-                         header=None)
-        df.columns = ['x', 'y', 'z']
-        to_replace = -3.402823466385289e+38
+                         names=['x', 'y', 'z'],
+                         header=0)
+        os.remove(f'{file_loc}.xyz')
+        to_replace = -3.402823466385289e+38  # don't know why...
         df.replace(to_replace, 0, inplace=True)
         self.df = round(df)
-        # df.to_csv(f'data/{self.location}.csv', index=False)
-
 
     def mesh(self):
         """Generates a 3D mesh of elevation data."""
@@ -123,18 +125,19 @@ class Process:
         yi = np.linspace(min(self.df.y),
                          max(self.df.y),
                          mesh_resol)
-        self.X, self.Y = np.meshgrid(xi, yi)
+        x_mesh, y_mesh = np.meshgrid(xi, yi)
         # Interpolate to fit grid
-        self.Z = griddata(points=(self.df.x, self.df.y),
+        z_mesh = griddata(points=(self.df.x, self.df.y),
                           values=self.df.z,
-                          xi=(self.X, self.Y),
+                          xi=(x_mesh, y_mesh),
                           fill_value=0)
 
-        dict_ = dict(x=self.X,
-                     y=self.Y,
-                     z=self.Z)
-        # with open(f'data/{self.location}.json', 'w') as f:
-        #     json.dump(dict_, f)
+        dict_ = dict(x=x_mesh.tolist(),
+                     y=y_mesh.tolist(),
+                     z=z_mesh.tolist())
+
+        with open(f'data/{self.location}.json', 'w') as f:
+            json.dump(dict_, f)
 
     def i_dont_know_how_to_write_a_test(self):
         fig = plt.figure()
@@ -152,14 +155,14 @@ class Process:
     def test(self):
         """Runs elevation data preprocessing."""
 
-        self.clip()
+        # self.clip()
         self.detiffify()
         self.mesh()
         self.i_dont_know_how_to_write_a_test()
 
 
 if __name__ == '__main__':
-    download = Download(overwrite=True)
+    # download = Download(overwrite=True)
 
     with open('data/locations.json') as f:
         locations = json.load(f)
