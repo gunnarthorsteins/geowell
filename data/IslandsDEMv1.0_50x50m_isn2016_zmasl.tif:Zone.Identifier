@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://ftp.lmi.is/gisdata/raster/
+HostUrl=https://ftp.lmi.is/gisdata/raster/IslandsDEMv1.0_50x50m_isn2016_zmasl.tif

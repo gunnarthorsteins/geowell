@@ -14,9 +14,9 @@ class Download:
 
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
-        if not self.overwrite:
-            self._download()
-            self._wrap()
+        if self.overwrite:
+            # self._download()
+            self._warp()
 
     def _download(self, resolution=20):
         """Downloads a raster map of Iceland from
@@ -29,7 +29,7 @@ class Download:
 
         file = 'data/iceland.tif'
         url_folder = 'https://ftp.lmi.is/gisdata/raster/'
-        url = f'{url_folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_daylight.tif'
+        url = f'{url_folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_zmasl.tif'
         request = requests.get(url, stream=True)
         if request.status_code != 200:
             return
@@ -47,9 +47,11 @@ class Download:
         ds = gdal.Open(raster)
         projection = ds.GetProjection()
         if projection.find('ISN93') == -1:
+            print('Warping...')
             warp = gdal.Warp(raster,
                              ds,
                              dstSRS='EPSG:3057')
+            print('Warping finished')
         ds = None
 
 
@@ -78,8 +80,6 @@ class Process:
         """
 
         file = f'data/{self.location}.tif'
-        if os.path.exists(file):
-            return
 
         ds = gdal.Open('data/iceland.tif')
         ds = gdal.Translate(file,
@@ -98,27 +98,19 @@ class Process:
         """
 
         ds = gdal.Open(f'data/{self.location}.tif')
-
-        geotransform = ds.GetGeoTransform()
-        res = round(geotransform[1])
-        x_min = geotransform[0]
-        y_max = geotransform[3]
-        x_size = ds.RasterXSize
-        y_size = ds.RasterYSize
-        x_start = x_min + res / 2
-        y_start = y_max - res / 2
-
-        x = np.arange(x_start, x_start + x_size * res, res)
-        y = np.arange(y_start, y_start - y_size * res, -res)
-        x = np.tile(x, y_size)
-        y = np.repeat(y, x_size)
-
-        array = ds.GetRasterBand(1).ReadAsArray()
+        xyz = gdal.Translate(f'data/{self.location}.xyz', ds)
+        xyz = None
         ds = None
-        dictionary = {'x': x,
-                      'y': y,
-                      'value': array.flatten()}
-        self.df = pd.DataFrame(dictionary)
+
+        df = pd.read_csv(f'data/{self.location}.xyz',
+                         sep=' ',
+                         header=None)
+        df.columns = ['x', 'y', 'z']
+        to_replace = -3.402823466385289e+38
+        df.replace(to_replace, 0, inplace=True)
+        self.df = round(df)
+        # df.to_csv(f'data/{self.location}.csv', index=False)
+
 
     def mesh(self):
         """Generates a 3D mesh of elevation data."""
@@ -134,16 +126,15 @@ class Process:
         self.X, self.Y = np.meshgrid(xi, yi)
         # Interpolate to fit grid
         self.Z = griddata(points=(self.df.x, self.df.y),
-                          values=self.df.value,
+                          values=self.df.z,
                           xi=(self.X, self.Y),
                           fill_value=0)
 
         dict_ = dict(x=self.X,
                      y=self.Y,
                      z=self.Z)
-        
-        with open(f'data/{self.location}.json', 'w') as f:
-            json.dump(dict_, f)
+        # with open(f'data/{self.location}.json', 'w') as f:
+        #     json.dump(dict_, f)
 
     def i_dont_know_how_to_write_a_test(self):
         fig = plt.figure()
@@ -165,11 +156,10 @@ class Process:
         self.detiffify()
         self.mesh()
         self.i_dont_know_how_to_write_a_test()
-        # self.javascript()
 
 
 if __name__ == '__main__':
-    # download = Download(overwrite=False)
+    download = Download(overwrite=True)
 
     with open('data/locations.json') as f:
         locations = json.load(f)
