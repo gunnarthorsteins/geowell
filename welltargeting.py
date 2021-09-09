@@ -1,18 +1,4 @@
-import json
-import warnings
-import numpy as np
-import pandas as pd
-from matplotlib import cm
-from scipy.interpolate import griddata
 
-from bokeh.plotting import figure, show
-from bokeh.layouts import gridplot, column
-from bokeh.core.properties import Instance, String
-from bokeh.models import ColumnDataSource, LayoutDOM
-from bokeh.models import CustomJS, Select, Slider
-from bokeh.util.compiler import TypeScript
-
-import plotting
 
 
 class WellTargeting:

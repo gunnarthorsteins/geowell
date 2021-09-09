@@ -1,28 +1,18 @@
 import numpy as np
+import warnings
 
 
 class Trajectory2d:
-    def __init__(self):
-        pass
-
-    # TODO: Are these static methods the best way to do things?
-    @staticmethod
-    def cosd(deg):
+    def _cosd(deg):
         return np.cos(np.deg2rad(deg))
 
-    # TODO: Are these static methods the best way to do things?
-    @staticmethod
-    def sind(deg):
+    def _sind(deg):
         return np.sin(np.deg2rad(deg))
 
-    # TODO: Are these static methods the best way to do things?
-    @staticmethod
-    def tand(deg):
+    def _tand(deg):
         return np.tan(np.deg2rad(deg))
 
-    # TODO: Are these static methods the best way to do things?
-    @staticmethod
-    def split_curve(self):        # Determine casing TVD to split curve
+    def _casing_split(self):        # Determine casing TVD to split curve
         """Splits the curve above/below casing for plot coloring"""
 
         if self.cd <= self.kop:
@@ -33,6 +23,9 @@ class Trajectory2d:
             self.split = 50 + len(z2) + sum(len_3 < (self.cd - self.Z))
         else:
             warnings.warn('Check casing block')
+
+    def __init__(self):
+        pass
 
     def trajectory_2d(self):
         '''Three legs:
@@ -66,19 +59,19 @@ class Trajectory2d:
         z2[0] = z1[-1]
         len_2[0] = z1[-1]
         for i in range(1, self.dip - 1):
-            r2[i] = r2[i-1] + self.sind(i) / self.bu
-            z2[i] = z2[i-1] + self.cosd(i) / self.bu
+            r2[i] = r2[i-1] + self._sind(i) / self.bu
+            z2[i] = z2[i-1] + self._cosd(i) / self.bu
             len_2[i] = len_2[i-1] + 1 / self.bu
 
         # Third leg - The last one
         L2 = self.mmd - self.kop - self.dip / self.bu
         r3 = np.linspace(
-            r2[-1], L2 * self.sind(self.dip)
+            r2[-1], L2 * self._sind(self.dip)
         )
-        vert = z2[-1] + np.linspace(0, L2 * self.cosd(self.dip))
+        vert = z2[-1] + np.linspace(0, L2 * self._cosd(self.dip))
         p = np.polyfit(r3, vert, 1)
         z3 = np.polyval(p, r3)
-        len_3 = z3 / self.cosd(self.dip)
+        len_3 = z3 / self._cosd(self.dip)
 
         self.r = np.concatenate((r1, r2, r3))
         self.z = np.concatenate((z1, z2, z3))
@@ -93,8 +86,8 @@ class Trajectory3d(Trajectory2d):
 
         def delta(r):
 
-            delta_y = self.r / np.sqrt(self.tand(self.az)**2 + 1)
-            delta_x = delta_y * self.tand(self.az)
+            delta_y = self.r / np.sqrt(self._tand(self.az)**2 + 1)
+            delta_x = delta_y * self._tand(self.az)
 
             return delta_x, delta_y
 
@@ -112,7 +105,7 @@ class Trajectory3d(Trajectory2d):
 
             delta_y /= m_to_deg
             # m to deg is lat dependent for lon
-            delta_x *= self.cosd(self.lat) / m_to_deg
+            delta_x *= self._cosd(self.lat) / m_to_deg
             if self.az <= 90 or self.az > 270:
                 y[i] += delta_y
                 x[i] += delta_x
