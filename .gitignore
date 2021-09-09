@@ -1,3 +1,9 @@
+# CUSTOM
+*.xyz
+*.tif
+*.html
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -5,14 +11,6 @@ __pycache__/
 
 # C extensions
 *.so
-
-# tif files
-*.tif
-
-*.html
-
-# csv-files
-*.csv
 
 # Distribution / packaging
 .Python

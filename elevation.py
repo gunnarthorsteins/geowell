@@ -8,37 +8,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm
 
-from bokeh.models import ColumnDataSource, LayoutDOM
-from bokeh.core.properties import Instance, String
-from bokeh.models import ColumnDataSource, LayoutDOM
-from bokeh.util.compiler import TypeScript
-from bokeh.plotting import figure, show
 
-
-class Preprocess:
-    """Collects and prepares elevation raster data for plotting"""
+class Download:
+    """Downloads a map of Iceland and preprocesses."""
 
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
+        if self.overwrite:
+            # self._download()
+            self._warp()
 
-        with open('locations.json') as json_file:
-            self.locations = json.load(json_file)
-
-    def download(self, resolution=20):
+    def _download(self, resolution=20):
         """Downloads a raster map of Iceland from
         The National Land Survey of Iceland.
 
         Args:
             resolution (int): elevation resolution [m].
-                              Can be 10, 20 (default) or 50
+                                Can be 10, 20 (default) or 50
         """
 
         file = 'data/iceland.tif'
-        if os.path.exists(file) or not self.overwrite:
-            return
-
-        folder = 'https://ftp.lmi.is/gisdata/raster/'
-        url = f'{folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_daylight.tif'
+        url_folder = 'https://ftp.lmi.is/gisdata/raster/'
+        url = f'{url_folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_zmasl.tif'
         request = requests.get(url, stream=True)
         if request.status_code != 200:
             return
@@ -56,12 +47,30 @@ class Preprocess:
         ds = gdal.Open(raster)
         projection = ds.GetProjection()
         if projection.find('ISN93') == -1:
+            print('Warping...')
             warp = gdal.Warp(raster,
                              ds,
                              dstSRS='EPSG:3057')
+            print('Warping finished')
         ds = None
 
-    def clip(self, location, coordinates):
+
+class Process:
+    """Collects and prepares elevation raster data for plotting"""
+
+    def __init__(self, location, coordinates, overwrite=False):
+        """
+        Args:
+            overwrite (bool, optional): Whether to overwrite existing surface
+                                        data or not. Defaults to False.
+        """
+
+        self.overwrite = overwrite
+        self.location = location
+        self.coordinates = coordinates
+        print(self.location)
+
+    def clip(self):
         """Clips the original map into smaller, more manageble pieces.
 
         Args:
@@ -70,91 +79,62 @@ class Preprocess:
                                                          lrx, lry
         """
 
-        file = f'data/{location}.tif'
-        if os.path.exists(file):
-            return
+        file = f'data/{self.location}.tif'
 
         ds = gdal.Open('data/iceland.tif')
         ds = gdal.Translate(file,
                             ds,
-                            projWin=[coordinates["ulx"],
-                                     coordinates["uly"],
-                                     coordinates["lrx"],
-                                     coordinates["lry"]])
+                            projWin=[self.coordinates["ulx"],
+                                     self.coordinates["uly"],
+                                     self.coordinates["lrx"],
+                                     self.coordinates["lry"]])
         ds = None
 
-    def tif_to_csv(self, location):
+    def detiffify(self):
         """Converts geotiff to csv.
 
         Args:
             location (str): The location name
         """
-        file = f'data/{location}.csv'
-        if os.path.exists(file):
-            return
 
-        ds = gdal.Open(f'data/{location}.tif')
-
-        geotransform = ds.GetGeoTransform()
-        res = round(geotransform[1])
-        x_min = geotransform[0]
-        y_max = geotransform[3]
-        x_size = ds.RasterXSize
-        y_size = ds.RasterYSize
-        x_start = x_min + res / 2
-        y_start = y_max - res / 2
-
-        x = np.arange(x_start, x_start + x_size * res, res)
-        y = np.arange(y_start, y_start - y_size * res, -res)
-        x = np.tile(x, y_size)
-        y = np.repeat(y, x_size)
-
-        array = ds.GetRasterBand(1).ReadAsArray()
+        ds = gdal.Open(f'data/{self.location}.tif')
+        xyz = gdal.Translate(f'data/{self.location}.xyz', ds)
+        xyz = None
         ds = None
-        dictionary = {'x': x,
-                      'y': y,
-                      'value': array.flatten()}
-        df = pd.DataFrame(dictionary)
-        df = df.round()
-        df.to_csv(f'data/{location}.csv', index=False)
 
-    def test(self):
-        """Runs elevation data preprocessing."""
-
-        if not os.path.exists('data/'):
-            self.download()
-            self.warp()
-
-            for location, coordinates in self.locations.items():
-                self.clip(location, coordinates)
-                self.tif_to_csv(location)
+        df = pd.read_csv(f'data/{self.location}.xyz',
+                         sep=' ',
+                         header=None)
+        df.columns = ['x', 'y', 'z']
+        to_replace = -3.402823466385289e+38
+        df.replace(to_replace, 0, inplace=True)
+        self.df = round(df)
+        # df.to_csv(f'data/{self.location}.csv', index=False)
 
 
-class Surface:
-    def __init__(self):
-        pass
-
-    def mesh(self, location):
-
-        df = pd.read_csv(f'data/{location}.csv')
+    def mesh(self):
+        """Generates a 3D mesh of elevation data."""
 
         # Create a 2D mesh grid
         mesh_resol = 100  # Increase/decrease for higher/lower resolution
-        xi = np.linspace(min(df.x),
-                         max(df.x),
+        xi = np.linspace(min(self.df.x),
+                         max(self.df.x),
                          mesh_resol)
-        yi = np.linspace(min(df.y),
-                         max(df.y),
+        yi = np.linspace(min(self.df.y),
+                         max(self.df.y),
                          mesh_resol)
         self.X, self.Y = np.meshgrid(xi, yi)
         # Interpolate to fit grid
-        self.Z = griddata(points=(df.x, df.y),
-                          values=df.value,
+        self.Z = griddata(points=(self.df.x, self.df.y),
+                          values=self.df.z,
                           xi=(self.X, self.Y),
                           fill_value=0)
-        self.source3D = ColumnDataSource(data=dict(x=self.X,
-                                                   y=self.Y,
-                                                   z=self.Z))
+
+        dict_ = dict(x=self.X,
+                     y=self.Y,
+                     z=self.Z)
+        # with open(f'data/{self.location}.json', 'w') as f:
+        #     json.dump(dict_, f)
 
     def i_dont_know_how_to_write_a_test(self):
         fig = plt.figure()
@@ -169,31 +149,22 @@ class Surface:
                         antialiased=True)
         fig.show()
 
-    def javascript(self):
-        class Surface3d(LayoutDOM):
-            with open('vis.ts') as tsFile:
-                TS_CODE = tsFile.read()
-
-            __implementation__ = TypeScript(TS_CODE)
-            data_source = Instance(ColumnDataSource)
-
-            x = String
-            y = String
-            z = String
-
-        surface = Surface3d(
-            x='x', y='y', z='z', data_source=self.source3D)
-        show(surface)  # saves the figure as elevation.html
-
     def test(self):
-        location = 'Svartsengi'
-        self.mesh(location)
+        """Runs elevation data preprocessing."""
+
+        self.clip()
+        self.detiffify()
+        self.mesh()
         self.i_dont_know_how_to_write_a_test()
-        # self.javascript()
 
 
 if __name__ == '__main__':
-    preprocessing = Preprocess(overwrite=False)
-    preprocessing.test()
-    surface = Surface()
-    surface.test()
+    download = Download(overwrite=True)
+
+    with open('data/locations.json') as f:
+        locations = json.load(f)
+
+    for location, coordinates in locations.items():
+
+        process = Process(location, coordinates)
+        process.test()
