@@ -16,30 +16,15 @@ class Preprocess:
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
 
-    def is_existant(self, dest_file):
-        if self.overwrite:
-            return False
-        __is_exist = os.path.exists(dest_file)
-        return __is_exist
-
-    def reproject(self):
-        """The original file is in ESPG:8088 (ISN2016).
-        This method reprojects it to ESPG:3057 (ISN93)
-        """
-
-        raster = 'data/iceland.tif'
-        ds = gdal.Open(raster)
-        warp = gdal.Warp(raster, ds, dstSRS='EPSG:3057')
-
     def download(self, resolution=20):
-        """Downloads a raster map of Iceland
+        """Downloads a raster map of Iceland from The National Land Survey of Iceland
 
-        params:
-            resolution - elevation resolution [m]. Can be either 10, 20 (default) or 50
+        Args:
+            resolution (int): elevation resolution [m]. Can be either 10, 20 (default) or 50
         """
 
-        dest_file = 'data/iceland.tif'
-        if self.is_existant(dest_file):
+        file = 'data/iceland.tif'
+        if os.path.exists(file) or not self.overwrite:
             return
 
         folder = 'https://ftp.lmi.is/gisdata/raster/'
@@ -48,64 +33,81 @@ class Preprocess:
         if request.status_code != 200:
             return
 
-        with open(dest_file, 'wb') as f:
+        with open(file, 'wb') as f:
             for chunk in request.iter_content(1024):
                 f.write(chunk)
 
-        self.reproject()
+    def warp(self):
+        """The original file is in ESPG:8088 (ISN2016).
+        This method warps it to ESPG:3057 (ISN93)
+        """
+
+        raster = 'data/iceland.tif'
+        ds = gdal.Open(raster)
+        projection = ds.GetProjection()
+        if projection.find('ISN93') == -1:
+            warp = gdal.Warp(raster, ds, dstSRS='EPSG:3057')
+        ds = None
 
     def clip(self, location, coordinates):
-        """Clips the entire map into smaller, more manageble maps of each area"""
+        """Clips the entire map into smaller, more manageble maps of each area
 
-        location_file = f'data/{location}.tif'
-        if self.is_existant(location_file):
+        Args:
+            location (str): The location name
+            coordinates (dict): Two sets of coordinates, ulx, uly, lrx, lry
+        """
+
+        file = f'data/{location}.tif'
+        if os.path.exists(file):
             return
 
         ds = gdal.Open('data/iceland.tif')
-        # projWin order of coords: ulx, uly, lrx, lry
-        ds = gdal.Translate(location_file,
+        ds = gdal.Translate(file,
                             ds,
-                            projWin=[coordinates["xmin"],
-                                     coordinates["ymax"],
-                                     coordinates["xmax"],
-                                     coordinates["ymin"]])
+                            projWin=[coordinates["ulx"],
+                                     coordinates["uly"],
+                                     coordinates["lrx"],
+                                     coordinates["lry"]])
         ds = None
 
     def tif_to_csv(self, location):
         """Converts geotiff to csv for plotting 3d mesh in bokeh"""
 
         ds = gdal.Open(f'data/{location}.tif')
-
-        array = ds.GetRasterBand(1).ReadAsArray()
-        flattened = array.flatten()
         geotransform = ds.GetGeoTransform()
-        res = geotransform[1]
+
+        res = round(geotransform[1])
         x_min = geotransform[0]
         y_max = geotransform[3]
         x_size = ds.RasterXSize
         y_size = ds.RasterYSize
         x_start = x_min + res / 2
         y_start = y_max - res / 2
-        ds = None
 
         x = np.arange(x_start, x_start + x_size * res, res)
         y = np.arange(y_start, y_start - y_size * res, -res)
         x = np.tile(x, y_size)
         y = np.repeat(y, x_size)
 
+        array = ds.GetRasterBand(1).ReadAsArray()
+        ds = None
         dictionary = {'x': x,
                       'y': y,
-                      'value': flattened}
+                      'value': array.flatten()}
         df = pd.DataFrame(dictionary)
+        df = df.round()
         df.to_csv(f'data/{location}.csv', index=False)
 
-    def process(self):
+    def run(self):
+        if not os.path.exists('data/'):
+            self.download()
+            self.warp()
 
         with open('locations.json') as json_file:
             locations = json.load(json_file)
 
         for location, coordinates in locations.items():
-            # self.clip(location, coordinates)
+            self.clip(location, coordinates)
             self.tif_to_csv(location)
 
 
@@ -174,6 +176,5 @@ class Elevation:
 
 
 if __name__ == '__main__':
-    elev = Preprocess(overwrite=True)
-    # elev.download()
-    elev.process()
+    preprocessing = Preprocess(overwrite=False)
+    preprocessing.run()
