@@ -131,7 +131,6 @@ class Process:
                           values=self.df.z,
                           xi=(x_mesh, y_mesh),
                           fill_value=0)
-
         dict_ = dict(x=x_mesh.tolist(),
                      y=y_mesh.tolist(),
                      z=z_mesh.tolist())
