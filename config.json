@@ -1,0 +1,44 @@
+{
+    "default_values": {
+        "lon": 333000,
+        "lat": 376000,
+        "mmd": 2500,
+        "dip": 20,
+        "Z": 20,
+        "az": 30,
+        "cd": 1500,
+        "kop": 1000,
+        "bu": 0.05
+    },
+    "palette": {
+        "gray": "#4c4c4c",
+        "red": "#ee2d36",
+        "blue": "#424d57"
+    },
+    "wgs_isn_conversion_constants": {
+        "A": 0.0174532925199433,
+        "B": 11616778.382033,
+        "C": 0.785398163397448,
+        "E": 0.04090959566525,
+        "F": 0.0818191913305,
+        "G": 0.90633380084752,
+        "H": 0.0158185089469038,
+        "J": 3482044.27322585,
+        "K": 500000
+    },
+    "locations_bbox": {
+        "Reykjanes": {
+            "ulx": 314985,
+            "lrx": 320900,
+            "lry": 371080,
+            "uly": 376528
+        },
+        "Svartsengi": {
+            "ulx": 325720,
+            "lrx": 334720,
+            "lry": 373620,
+            "uly": 381900
+        }
+    },
+    "borholuskra": "http://opingogn.is/dataset/7ea12ee4-143c-4502-9efb-884773e58209/resource/eaad3718-c9f3-464f-a734-9a87f026790e/download/borholur-26-27042017.csv"
+}

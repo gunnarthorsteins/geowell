@@ -5,9 +5,8 @@ import requests
 from osgeo import gdal
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm
 
+from tests import TestPlots
 
 class Download:
     """Downloads a map of Iceland and preprocesses."""
@@ -15,7 +14,7 @@ class Download:
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
         if self.overwrite:
-            # self._download()
+            self._download()
             self._warp()
 
     def _download(self, resolution=20):
@@ -24,7 +23,7 @@ class Download:
 
         Args:
             resolution (int): elevation resolution [m].
-                                Can be 10, 20 (default) or 50
+                              Can be 10, 20 (default) or 50.
         """
 
         file = 'data/iceland.tif'
@@ -61,8 +60,8 @@ class Process:
     def __init__(self, location, coordinates, overwrite=False):
         """
         Args:
-            location (str): Location name, see data/locations.json
-            coordinates (dict): Location bounding box, see data/locations.json
+            location (str): Location name, see config
+            coordinates (dict): Location bounding box, see config
             overwrite (bool, optional): Whether to overwrite existing surface
                                         data or not. Defaults to False.
         """
@@ -70,7 +69,6 @@ class Process:
         self.overwrite = overwrite
         self.location = location
         self.coordinates = coordinates
-        print(self.location)
 
     def clip(self):
         """Clips the original map into smaller, more manageble pieces.
@@ -138,35 +136,28 @@ class Process:
         with open(f'data/{self.location}.json', 'w') as f:
             json.dump(dict_, f)
 
-    def i_dont_know_how_to_write_a_test(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot_surface(self.X,
-                        self.Y,
-                        self.Z,
-                        rstride=1,
-                        cstride=1,
-                        cmap=matplotlib.cm.jet,
-                        linewidth=1,
-                        antialiased=True)
-        fig.show()
-
-    def test(self):
+    def run(self):
         """Runs elevation data preprocessing."""
 
-        # self.clip()
+        self.clip()
         self.detiffify()
         self.mesh()
-        self.i_dont_know_how_to_write_a_test()
 
+def main():
+    download = Download(overwrite=True)
+    for location, coordinates in locations.items():
+        process = Process(location, coordinates)
+        process.run()
+        break  # Only want Reykjanes
 
 if __name__ == '__main__':
-    # download = Download(overwrite=True)
+    with open('config.json') as f:
+        settings = json.load(f)
+    locations = settings["locations_bbox"]
 
-    with open('data/locations.json') as f:
-        locations = json.load(f)
+    # main()
 
-    for location, coordinates in locations.items():
-
-        process = Process(location, coordinates)
-        process.test()
+    # For testing
+    with open(f'data/Reykjanes.json') as f:
+        elevation_data = json.load(f)        
+    TestPlots.plot_elevation_map(elevation_data)
