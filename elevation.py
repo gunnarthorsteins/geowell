@@ -6,13 +6,20 @@ from osgeo import gdal
 import pandas as pd
 import numpy as np
 
-from tests import TestPlots
+from tests import UnitTests
+
+with open('config.json') as f:
+    settings = json.load(f)
+locations = settings["locations_bbox"]
+
+MESH_RESOLUTION = 50  # Increase/decrease for higher/lower resolution
 
 class Download:
     """Downloads a map of Iceland and preprocesses."""
 
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
+        self.filename = 'data/iceland.tif'
         if self.overwrite:
             self._download()
             self._warp()
@@ -26,14 +33,13 @@ class Download:
                               Can be 10, 20 (default) or 50.
         """
 
-        file = 'data/iceland.tif'
         url_folder = 'https://ftp.lmi.is/gisdata/raster/'
         url = f'{url_folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_zmasl.tif'
         request = requests.get(url, stream=True)
         if request.status_code != 200:
             return
 
-        with open(file, 'wb') as f:
+        with open(self.filename, 'wb') as f:
             for chunk in request.iter_content(1024):
                 f.write(chunk)
 
@@ -42,12 +48,11 @@ class Download:
         ESPG:8088 (ISN2016) to ESPG:3057 (ISN93).
         """
 
-        raster = 'data/iceland.tif'
-        ds = gdal.Open(raster)
+        ds = gdal.Open(self.filename)
         projection = ds.GetProjection()
         if projection.find('ISN93') == -1:
             print('Warping...')
-            warp = gdal.Warp(raster,
+            warp = gdal.Warp(self.filename,
                              ds,
                              dstSRS='EPSG:3057')
             print('Warping finished')
@@ -110,29 +115,32 @@ class Process:
         os.remove(f'{file_loc}.xyz')
         to_replace = -3.402823466385289e+38  # don't know why...
         df.replace(to_replace, 0, inplace=True)
-        self.df = round(df)
 
-    def mesh(self):
+        return round(df)
+
+    def mesh(self, df: pd.DataFrame):
         """Generates a 3D mesh of elevation data."""
 
         # Create a 2D mesh grid
-        mesh_resol = 100  # Increase/decrease for higher/lower resolution
-        xi = np.linspace(min(self.df.x),
-                         max(self.df.x),
-                         mesh_resol)
-        yi = np.linspace(min(self.df.y),
-                         max(self.df.y),
-                         mesh_resol)
+        xi = np.linspace(min(df.x),
+                         max(df.x),
+                         MESH_RESOLUTION)
+        yi = np.linspace(min(df.y),
+                         max(df.y),
+                         MESH_RESOLUTION)
         x_mesh, y_mesh = np.meshgrid(xi, yi)
         # Interpolate to fit grid
-        z_mesh = griddata(points=(self.df.x, self.df.y),
-                          values=self.df.z,
+        z_mesh = griddata(points=(df.x, df.y),
+                          values=df.z,
                           xi=(x_mesh, y_mesh),
                           fill_value=0)
         dict_ = dict(x=x_mesh.tolist(),
                      y=y_mesh.tolist(),
                      z=z_mesh.tolist())
 
+        return dict_
+
+    def save(self, dict_):
         with open(f'data/{self.location}.json', 'w') as f:
             json.dump(dict_, f)
 
@@ -140,24 +148,17 @@ class Process:
         """Runs elevation data preprocessing."""
 
         self.clip()
-        self.detiffify()
-        self.mesh()
+        df = self.detiffify()
+        dict_ = self.mesh(df)
+        self.save(dict_)
 
 def main():
-    download = Download(overwrite=True)
+    # Download(overwrite=True)
     for location, coordinates in locations.items():
         process = Process(location, coordinates)
         process.run()
         break  # Only want Reykjanes
 
 if __name__ == '__main__':
-    with open('config.json') as f:
-        settings = json.load(f)
-    locations = settings["locations_bbox"]
-
-    # main()
-
-    # For testing
-    with open(f'data/Reykjanes.json') as f:
-        elevation_data = json.load(f)        
-    TestPlots.plot_elevation_map(elevation_data)
+    main()
+    UnitTests.test_elevation()

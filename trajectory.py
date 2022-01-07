@@ -2,7 +2,7 @@ import json
 import numpy as np
 import warnings
 
-from tests import TestPlots
+from tests import UnitTests
 from utils.trigonometrics import *
 
 M_TO_DEG = 1.11e5  # m to deg on Earth's surface
@@ -69,7 +69,7 @@ class Trajectory2d:
         return split_index
 
     def _vertical_leg(self):
-        """First leg - a vertical well segment
+        """First leg - vertical well segment
 
         Returns:
             r_vertical (np.array): Horizontal displacement (all zeros)
@@ -201,10 +201,5 @@ class Trajectory3d(Trajectory2d):
         return x, y, self.r, self.z, self.casing_split_index
 
 if __name__ == '__main__':
-
-    # traj2d = Trajectory2d()
-    # r, z, casing_split_index = traj2d.assemble()
-    # TestPlots.plot_2d_trajectory(r, z, casing_split_index)
     traj3d = Trajectory3d()
-    x, y, r, z, i = traj3d.fork_r()
-    TestPlots.plot_3d_trajectory(x, y, z, i)
+    UnitTests.test_trajectory(traj3d)
