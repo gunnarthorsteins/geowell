@@ -15,12 +15,12 @@ gui.plot_2d_trajectory(r, z, casing_index)
 gui.plot_3d_trajectory(x, y, z, casing_index)
 
 # Elevation
-with open(f'data/Reykjanes.json') as f:
-    elevation_data = json.load(f)        
+with open(f"data/Reykjanes.json") as f:
+    elevation_data = json.load(f)
 gui.plot_elevation_map(elevation_data)
 
 # Wells
-wells_filename = 'data/wells.csv'
+wells_filename = "data/wells.csv"
 wells_df = pd.read_csv(wells_filename)
 gui.plot_incumbent_wells(wells_df)
 

@@ -8,17 +8,17 @@ from utils.trigonometrics import *
 
 class Trajectory2d:
 
-    '''Three legs:
+    """Three legs:
     1) Down to KOP
     2) Build-up
     3) Last leg to well bottom (straight)
 
     (Leading underscore for class methods not intended for external calls)
-    '''
+    """
 
     def __init__(self):
 
-        with open('config.json') as json_file:
+        with open("config.json") as json_file:
             default_values = json.load(json_file)
 
         self.Y = default_values["default_values"]["Y"]
@@ -41,7 +41,7 @@ class Trajectory2d:
 
         Returns:
             (list): A list of boolean values
-        """        
+        """
         return sum(a < b)
 
     def _get_casing_split(self):
@@ -53,16 +53,19 @@ class Trajectory2d:
 
         shifted_cd = self.CD - self.Z
 
-        if self.CD <= self.KOP: # Casing split on first leg
+        if self.CD <= self.KOP:  # Casing split on first leg
             split_index = self._get_index(self.z, shifted_cd)
         # The +50 is b/c the vertical segment always has a len of 50 which must be accounted for
         elif self.KOP < self.CD < self.len_buildup[-1]:  # Casing split on second leg
             split_index = self._get_index(self.len_buildup, shifted_cd) + 50
         elif self.len_buildup[-1] < self.CD:  # Casing split on third leg
-            split_index = len(self.len_buildup) + \
-                self._get_index(self.len_slanted, shifted_cd) + 50
+            split_index = (
+                len(self.len_buildup)
+                + self._get_index(self.len_slanted, shifted_cd)
+                + 50
+            )
         else:
-            warnings.warn('Check casing block')
+            warnings.warn("Check casing block")
 
         return split_index
 
@@ -97,9 +100,9 @@ class Trajectory2d:
         z_buildup[0] = end_z_vertical
         self.len_buildup[0] = end_z_vertical
         for i in range(1, self.DIP - 1):
-            r_buildup[i] = r_buildup[i-1] + sind(i) / self.BU
-            z_buildup[i] = z_buildup[i-1] + cosd(i) / self.BU
-            self.len_buildup[i] = self.len_buildup[i-1] + 1 / self.BU
+            r_buildup[i] = r_buildup[i - 1] + sind(i) / self.BU
+            z_buildup[i] = z_buildup[i - 1] + cosd(i) / self.BU
+            self.len_buildup[i] = self.len_buildup[i - 1] + 1 / self.BU
 
         return r_buildup, z_buildup
 
@@ -129,7 +132,7 @@ class Trajectory2d:
 
         Returns:
             [type]: [description]
-        """        
+        """
         self.r, self.z = self._vertical_leg()
         if self.KOP:
             r2, z2 = self._buildup_leg(self.z[-1])
@@ -158,7 +161,7 @@ class Trajectory3d(Trajectory2d):
             delta_y (float): north/southbound increment
         """
 
-        delta_y = r / np.sqrt(tand(self.AZ)**2 + 1)
+        delta_y = r / np.sqrt(tand(self.AZ) ** 2 + 1)
         delta_x = delta_y * tand(self.AZ)
 
         # Only needed when working with WGS84 (lat/lon)
@@ -199,6 +202,7 @@ class Trajectory3d(Trajectory2d):
                 x[i] += delta_x
         return x, y, self.r, self.z, self.casing_split_index
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     traj3d = Trajectory3d()
     UnitTests.test_trajectory(traj3d)

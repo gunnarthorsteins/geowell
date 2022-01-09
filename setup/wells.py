@@ -4,24 +4,25 @@ import matplotlib.pyplot as plt
 
 from tests import UnitTests
 
-wells_filename = 'data/wells.csv'
+wells_filename = "data/wells.csv"
+
 
 class OpenSourceWells:
     """Gets, processes, and saves the (open-source) coordinates of all wellheads in Reykjanes."""
 
     def __init__(self):
-        with open('config.json') as f:
+        with open("config.json") as f:
             self.settings = json.load(f)
-    
+
     def download(self):
         """Downloads dataset from LMÍ.
 
         Returns:
             (pd.DataFrame): All wells in Iceland
-        """        
+        """
 
         return pd.read_csv(self.settings["borholuskra"])
-    
+
     def filter_area(self, all_wells_in_iceland: pd.DataFrame):
         """Filters the dataset of all wells in Iceland to the
         wells in desired geothermal area.
@@ -32,9 +33,9 @@ class OpenSourceWells:
         Returns:
             (pd.DataFrame): All (currently available) wells
                             in Reykjanes geothermal area.
-        """        
+        """
 
-        return all_wells_in_iceland[all_wells_in_iceland['SVAEDISNAFN']=='Reykjanes']
+        return all_wells_in_iceland[all_wells_in_iceland["SVAEDISNAFN"] == "Reykjanes"]
 
     def process(self, wells_raw: pd.DataFrame):
         """Filters out unwanted columns and drops NaN values.
@@ -44,15 +45,16 @@ class OpenSourceWells:
 
         Returns:
             (pd.DataFrame): A filtered version of the 
-        """        
+        """
 
-        wells = wells_raw[['Borholunofn', 'x', 'y', 'MaxFDypi']]
+        wells = wells_raw[["Borholunofn", "x", "y", "MaxFDypi"]]
         wells = wells.dropna()
 
         return wells
-    
+
     def save(self, wells: pd.DataFrame):
         wells.to_csv(wells_filename, index=False)
+
 
 def main():
     wells_instance = OpenSourceWells()
@@ -61,6 +63,7 @@ def main():
     wells_df = wells_instance.process(wells_raw)
     wells_instance.save(wells_df)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # main()
     UnitTests.test_wells(wells_filename)

@@ -7,4 +7,5 @@ def interpolate(a, b):
     Returns:
         interpolated value
     """
-    return b[0] + (b[1]-b[0])*(a[1]-a[0])/(a[2]-a[0])
+    return b[0] + (b[1] - b[0]) * (a[1] - a[0]) / (a[2] - a[0])
+
