@@ -5,8 +5,6 @@ import warnings
 from tests import UnitTests
 from utils.trigonometrics import *
 
-M_TO_DEG = 1.11e5  # m to deg on Earth's surface
-
 
 class Trajectory2d:
 
@@ -23,8 +21,8 @@ class Trajectory2d:
         with open('config.json') as json_file:
             default_values = json.load(json_file)
 
-        self.LON = default_values["default_values"]["lon"]
-        self.LAT = default_values["default_values"]["lat"]
+        self.Y = default_values["default_values"]["Y"]
+        self.X = default_values["default_values"]["X"]
         self.MMD = default_values["default_values"]["mmd"]
         self.DIP = default_values["default_values"]["dip"]
         self.Z = default_values["default_values"]["Z"]
@@ -163,9 +161,11 @@ class Trajectory3d(Trajectory2d):
         delta_y = r / np.sqrt(tand(self.AZ)**2 + 1)
         delta_x = delta_y * tand(self.AZ)
 
-        delta_y /= M_TO_DEG
-        # m to deg is lat dependent for lon
-        delta_x *= cosd(self.LAT) / M_TO_DEG
+        # Only needed when working with WGS84 (lat/lon)
+        # M_TO_DEG = 1.11e5  # m to deg on Earth's surface
+        # delta_y /= M_TO_DEG
+        # # m to deg is lat dependent for lon
+        # delta_x *= cosd(self.X) / M_TO_DEG
 
         return delta_x, delta_y
 
@@ -180,8 +180,8 @@ class Trajectory3d(Trajectory2d):
             casing_split_index (int): casing split index, see Trajectory2d.get_casing_split()
         """
 
-        x = self.LON + np.zeros(len(self.r))
-        y = self.LAT + np.zeros(len(self.r))
+        x = self.X + np.zeros(len(self.r))
+        y = self.Y + np.zeros(len(self.r))
 
         # Special cases -> tand(az) = inf
         if self.AZ == 90 or self.AZ == 270:
@@ -197,7 +197,6 @@ class Trajectory3d(Trajectory2d):
             else:
                 y[i] += delta_y
                 x[i] += delta_x
-
         return x, y, self.r, self.z, self.casing_split_index
 
 if __name__ == '__main__':

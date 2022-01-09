@@ -1,19 +1,31 @@
 {
     "default_values": {
-        "lon": 317000,
-        "lat": 374000,
+        "X": 318000,
+        "Y": 374000,
         "mmd": 2500,
         "dip": 20,
         "Z": 20,
-        "az": 30,
+        "az": 300,
         "cd": 1500,
         "kop": 1000,
         "bu": 0.05
     },
+    "units": [
+        "ISN93",
+        "ISN93",
+        "m",
+        "deg",
+        "m",
+        "deg",
+        "m",
+        "m",
+        "deg/100ft"
+    ],
     "palette": {
         "gray": "#4c4c4c",
         "red": "#ee2d36",
-        "blue": "#424d57"
+        "blue": "#424d57",
+        "light_gray": "#cccccc"
     },
     "wgs_isn_conversion_constants": {
         "A": 0.0174532925199433,
@@ -28,10 +40,10 @@
     },
     "locations_bbox": {
         "Reykjanes": {
-            "ulx": 314985,
-            "lrx": 320900,
-            "lry": 371080,
-            "uly": 376528
+            "ulx": 317000,
+            "lrx": 320000,
+            "lry": 373000,
+            "uly": 376000
         },
         "Svartsengi": {
             "ulx": 325720,
@@ -40,5 +52,6 @@
             "uly": 381900
         }
     },
-    "borholuskra": "http://opingogn.is/dataset/7ea12ee4-143c-4502-9efb-884773e58209/resource/eaad3718-c9f3-464f-a734-9a87f026790e/download/borholur-26-27042017.csv"
+    "borholuskra": "http://opingogn.is/dataset/7ea12ee4-143c-4502-9efb-884773e58209/resource/eaad3718-c9f3-464f-a734-9a87f026790e/download/borholur-26-27042017.csv",
+    "well_name": "RN-38"
 }

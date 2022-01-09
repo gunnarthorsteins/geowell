@@ -16,3 +16,6 @@ class UnitTests:
     def test_wells(wells_filename):
         wells_df = pd.read_csv(wells_filename)
         UnitPlots.plot_incumbent_wells(wells_df)
+
+    def test_distance():
+        pass

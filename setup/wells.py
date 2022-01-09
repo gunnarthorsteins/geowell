@@ -6,7 +6,7 @@ from tests import UnitTests
 
 wells_filename = 'data/wells.csv'
 
-class Wells:
+class OpenSourceWells:
     """Gets, processes, and saves the (open-source) coordinates of all wellheads in Reykjanes."""
 
     def __init__(self):
@@ -55,7 +55,7 @@ class Wells:
         wells.to_csv(wells_filename, index=False)
 
 def main():
-    wells_instance = Wells()
+    wells_instance = OpenSourceWells()
     all_wells_in_iceland = wells_instance.download()
     wells_raw = wells_instance.filter_area(all_wells_in_iceland)
     wells_df = wells_instance.process(wells_raw)

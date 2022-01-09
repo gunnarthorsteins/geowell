@@ -84,9 +84,9 @@ class Process:
                                                          lrx, lry
         """
 
-        file = f'data/{self.location}.tif'
+        file = f'data/IslandsDEMv0_20x20m_zmasl_isn93.tif'
 
-        ds = gdal.Open('data/iceland.tif')
+        ds = gdal.Open(file)
         ds = gdal.Translate(file,
                             ds,
                             projWin=[self.coordinates["ulx"],
@@ -116,7 +116,7 @@ class Process:
         to_replace = -3.402823466385289e+38  # don't know why...
         df.replace(to_replace, 0, inplace=True)
 
-        return round(df)
+        return df
 
     def mesh(self, df: pd.DataFrame):
         """Generates a 3D mesh of elevation data."""
@@ -141,7 +141,7 @@ class Process:
         return dict_
 
     def save(self, dict_):
-        with open(f'data/{self.location}.json', 'w') as f:
+        with open(f'data/{self.location}2.json', 'w') as f:
             json.dump(dict_, f)
 
     def run(self):
