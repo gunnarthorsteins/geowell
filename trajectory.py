@@ -3,8 +3,7 @@ import numpy as np
 import warnings
 
 from tests import UnitTests
-from utils.trigonometrics import *
-
+from utils.trigonometrics import cosd, sind, tand
 
 class Trajectory2d:
 
@@ -55,8 +54,9 @@ class Trajectory2d:
 
         if self.CD <= self.KOP:  # Casing split on first leg
             split_index = self._get_index(self.z, shifted_cd)
-        # The +50 is b/c the vertical segment always has a len of 50 which must be accounted for
-        elif self.KOP < self.CD < self.len_buildup[-1]:  # Casing split on second leg
+        # The +50 is b/c the vertical segment always
+        # has a len of 50 which must be accounted for
+        elif self.KOP < self.CD < self.len_buildup[-1]:  # Casing split on 2nd leg
             split_index = self._get_index(self.len_buildup, shifted_cd) + 50
         elif self.len_buildup[-1] < self.CD:  # Casing split on third leg
             split_index = (
@@ -89,7 +89,8 @@ class Trajectory2d:
             end_z_vertical (float): Last z val of previous leg (r val is 0)
 
         Returns:
-            r_buildup (np.array): Horizontal displacement, perpendicular to azimuth
+            r_buildup (np.array): Horizontal displacement,
+                                  perpendicular to azimuth
             z_vertical (np.array): Vertical displacement
         """
 
@@ -114,7 +115,8 @@ class Trajectory2d:
             end_z_buildup (float): Last z val of previous leg
 
         Returns:
-            r_slanted (np.array): Horizontal displacement, perpendicular to azimuth
+            r_slanted (np.array): Horizontal displacement,
+                                  perpendicular to azimuth
             z_slanted (np.array): Vertical displacement
         """
 
@@ -151,7 +153,8 @@ class Trajectory3d(Trajectory2d):
         self.r, self.z, self.casing_split_index = super().assemble()
 
     def _get_delta(self, r):
-        """Forks horizontal displacement r into x and y components using the azimuth.
+        """Forks horizontal displacement r into
+        x and y components using the azimuth.
 
         Args:
             r (float): r component (inherited from super)
@@ -180,7 +183,8 @@ class Trajectory3d(Trajectory2d):
             y (np.array): north/southbound component
             r (np.array): sqrt(x^2 + y^2) -> For 2D plot
             z (np.array): vertical component
-            casing_split_index (int): casing split index, see Trajectory2d.get_casing_split()
+            casing_split_index (int): casing split index,
+                                      see Trajectory2d.get_casing_split()
         """
 
         x = self.X + np.zeros(len(self.r))
@@ -204,5 +208,5 @@ class Trajectory3d(Trajectory2d):
 
 
 if __name__ == "__main__":
-    traj3d = Trajectory3d()
-    UnitTests.test_trajectory(traj3d)
+    trajectory_ = Trajectory3d()
+    UnitTests.test_trajectory(trajectory_)

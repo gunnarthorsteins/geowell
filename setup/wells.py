@@ -4,15 +4,13 @@ import matplotlib.pyplot as plt
 
 from tests import UnitTests
 
-wells_filename = "data/wells.csv"
+with open("config.json") as f:
+    settings = json.load(f)
+locations = settings["locations_bbox"]
 
 
 class OpenSourceWells:
     """Gets, processes, and saves the (open-source) coordinates of all wellheads in Reykjanes."""
-
-    def __init__(self):
-        with open("config.json") as f:
-            self.settings = json.load(f)
 
     def download(self):
         """Downloads dataset from LMÍ.
@@ -21,7 +19,7 @@ class OpenSourceWells:
             (pd.DataFrame): All wells in Iceland
         """
 
-        return pd.read_csv(self.settings["borholuskra"])
+        return pd.read_csv(settings["borholuskra"])
 
     def filter_area(self, all_wells_in_iceland: pd.DataFrame):
         """Filters the dataset of all wells in Iceland to the
@@ -53,7 +51,7 @@ class OpenSourceWells:
         return wells
 
     def save(self, wells: pd.DataFrame):
-        wells.to_csv(wells_filename, index=False)
+        wells.to_csv(settings["wells_filename"], index=False)
 
 
 def main():
@@ -66,4 +64,4 @@ def main():
 
 if __name__ == "__main__":
     # main()
-    UnitTests.test_wells(wells_filename)
+    UnitTests.test_wells(settings["wells_filename"])

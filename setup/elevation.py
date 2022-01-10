@@ -8,12 +8,6 @@ import numpy as np
 
 from tests import UnitTests
 
-with open("config.json") as f:
-    settings = json.load(f)
-locations = settings["locations_bbox"]
-
-MESH_RESOLUTION = 50  # Increase/decrease for higher/lower resolution
-
 
 class Download:
     """Downloads a map of Iceland and preprocesses."""
@@ -122,8 +116,8 @@ class Process:
         """Generates a 3D mesh of elevation data."""
 
         # Create a 2D mesh grid
-        xi = np.linspace(min(df.x), max(df.x), MESH_RESOLUTION)
-        yi = np.linspace(min(df.y), max(df.y), MESH_RESOLUTION)
+        xi = np.linspace(min(df.x), max(df.x), settings["MESH_RESOLUTION"])
+        yi = np.linspace(min(df.y), max(df.y), settings["MESH_RESOLUTION"])
         x_mesh, y_mesh = np.meshgrid(xi, yi)
         # Interpolate to fit grid
         z_mesh = griddata(
@@ -155,5 +149,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     UnitTests.test_elevation()

@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from utils.interpolate import interpolate
-import trajectory
+from tests import UnitTests
+from trajectory import Trajectory3d
 
 with open("config.json") as f:
     settings = json.load(f)
@@ -34,16 +35,12 @@ class Distance:
             y_interp (float): The interpolated y-value
         """
 
-        # Interpolate x and y vals to match depths
-        g = self.proposed_well[i_proposed - 1 : i_proposed + 1, -1]
-        # print(x_to_interpolate)
-        print(g)
         x_interp = interpolate(
-            a=self.proposed_well[i_proposed - 1 : i_proposed + 1, -1],
+            a=self.proposed_well[i_proposed - 1 : i_proposed + 2, -1],
             b=x_to_interpolate,
         )
         y_interp = interpolate(
-            a=self.proposed_well[i_proposed - 1 : i_proposed + 1, -1],
+            a=self.proposed_well[i_proposed - 1 : i_proposed + 2, -1],
             b=y_to_interpolate,
         )
 
@@ -68,7 +65,7 @@ class Distance:
                 well["MaxFDypi"],
                 len(self.proposed_well),
             )
-            for i_proposed in range(1, len(self.proposed_well)):
+            for i_proposed in range(1, len(self.proposed_well) - 1):
                 for k in range(1, len(z_incumbent) - 1):
                     if (
                         z_incumbent[k]
@@ -81,36 +78,19 @@ class Distance:
                             y_to_interpolate=np.repeat(well["y"], 2),
                         )
                         well_distance_temp.append(
-                            self.calculate_distance(x_interp, y_interp)
+                            self.calculate_distance(x_interp, y_interp, i_proposed)
                         )
-            distances[well_name] = well_distance_temp
+            if well_distance_temp:
+                distances[well_name] = well_distance_temp
 
-        for well_name, linspace in distances.items():
-            plt.plot(linspace)
-            plt.show()
-
-    def sort(self, n):
-        """Sorts the well distances
-
-        Args:
-
-
-        Returns:
-            (pd.DataFrame): A top n list
-        """
-        pass
-
-
-def main():
-    wells_filename = "data/wells.csv"
-    incumbent_wells = pd.read_csv(wells_filename)
-    traj_instance = trajectory.Trajectory3d()
-    x, y, _, z, _ = traj_instance.fork_r()
-    proposed_well = np.array((x, y, z)).T
-    distance = Distance(incumbent_wells, proposed_well)
-    distance.run()
+        return distances
 
 
 if __name__ == "__main__":
-    main()
+    incumbent_wells = pd.read_csv(settings["wells_filename"])
+    trajectory_ = Trajectory3d()
+    x, y, _, z, _ = trajectory_.fork_r()
+    proposed_well = np.array((x, y, z)).T
+    distance_ = Distance(incumbent_wells, proposed_well)
+    UnitTests.test_distance(distance_)
 

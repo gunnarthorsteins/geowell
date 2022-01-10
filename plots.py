@@ -98,35 +98,52 @@ class UnitPlots:
         ax.invert_zaxis()  # We want the z-axis to be reversed
         plt.show()
 
+    def plot_distances(distances: dict):
+        for well_name, distance_curve in distances.items():
+            plt.plot(distance_curve)
+        plt.show()
+
 
 class GUI:
     def __init__(self):
         plt.rcParams["font.family"] = "monospace"
-        fig = plt.figure(figsize=(12, 12))
-        gs = GridSpec(3, 3, figure=fig)
+        self.fig = plt.figure(figsize=(12, 12))
+        gs = GridSpec(nrows=3, ncols=3, figure=self.fig)
 
-        self.ax_2d = fig.add_subplot(gs[:, 0])
+        # 2D Trajectory
+        self.ax_2d = self.fig.add_subplot(gs[:2, 0])
         self.ax_2d.invert_yaxis()
         self.ax_2d.set_ylabel("Depth [m]")
         self.ax_2d.set_xlabel("Horizontal throw [m]")
-        self.ax_2d.spines["right"].set_visible(False)
-        self.ax_2d.spines["top"].set_visible(False)
+        self.ax_2d.xaxis.tick_top()
+        self.ax_2d.xaxis.set_label_position("top")
+        # self.ax_2d.spines['right'].set_visible(False)
+        # self.ax_2d.spines['bottom'].set_visible(False)
 
-        self.ax_3d = fig.add_subplot(gs[:, 1:], projection="3d")
+        # Well distance
+        self.ax_distances = self.fig.add_subplot(gs[-1, 0])
+        self.ax_distances.set_xlabel("Vertical Depth [m]")
+        well_name = settings["well_name"]
+        self.ax_distances.set_ylabel(
+            f"Distance between {well_name}\nand other wells [m]"
+        )
+        self.ax_distances.set_ylim([0, settings["max_distance"]])
+        # self.ax_distances.spines['right'].set_visible(False)
+        # self.ax_distances.spines['top'].set_visible(False)
+
+        # 3D Map
+        self.ax_3d = self.fig.add_subplot(gs[:, 1:3], projection="3d")
         self.ax_3d.view_init(
             elev=90, azim=0
         )  # elev=90 & azim=0 sets a birds-eye initial view
         self.ax_3d.invert_xaxis()
         self.ax_3d.invert_zaxis()
-        self.ax_3d.dist = 7
+        self.ax_3d.dist = 8
         self.ax_3d.set_proj_type("ortho")
         # self.ax_3d.set_ylim([373_000, 376_000])
         # self.ax_3d.set_xlim([317_500, 319_500])
 
     def _2d_annotation(self):
-        # keys = ['X', 'Y', 'MMD', 'Dip', 'Z', 'Az', 'CD', 'KOP', 'BU']
-        # units = ['ISN93', 'ISN93', 'm', 'deg', 'm', 'deg', 'm', 'm', 'deg/100ft']
-        # vals = [317000, 374000, 2500, 20, 20, 30, 1500, 1000, 1.5]
         cell_text = list(
             zip(
                 settings["default_values"].keys(),
@@ -138,24 +155,27 @@ class GUI:
         table = self.ax_2d.table(
             cellText=cell_text,
             colLabels=col_labels,
-            colColours=[settings["palette"]["light_gray"]] * 3,
-            cellLoc="right",
             loc="upper right",
-            colLoc="right",
             edges="open",
         )
         table.auto_set_column_width([0, 1, 2])
 
-        def set_align_for_column(table, col, align="left"):
+        def set_align_for_column(table, col, align):
             cells = [key for key in table._cells if key[1] == col]
             for cell in cells:
                 table._cells[cell]._loc = align
-
         set_align_for_column(table, col=0, align="left")
-        # set_align_for_column(table, col=1, align="left")
-        for key, cell in table.get_celld().items():
-            if key[0] == 0 or key[1] == -1:
-                cell.weight = "extra bold"
+        set_align_for_column(table, col=1, align="right")
+        # def set_align_for_column(table, col, align="left"):
+        #     cells = [key for key in table._cells if key[1] == col]
+        #     for cell in cells:
+        #         table._cells[cell]._loc = align
+
+        # set_align_for_column(table, col=0, align="left")
+        # # set_align_for_column(table, col=1, align='left')
+        # for key, cell in table.get_celld().items():
+        #     if key[0] == 0 or key[1] == -1:
+        #         cell.weight = "extra bold"
 
     def plot_2d_trajectory(self, r: np.array, z: np.array, i: int):
         """[summary]
@@ -242,4 +262,13 @@ class GUI:
                 y_linspace, x_linspace, z_linspace, c="k", solid_capstyle="round"
             )
             self.ax_3d.text(y[j], x[j], 0, name[j], c=settings["palette"]["gray"])
+
+    def plot_distances(self, distances: dict, z):
+        legend = []
+        for i, (well_name, distance_curve) in enumerate(distances.items()):
+            if min(distance_curve) < 300:
+                legend.append(well_name)
+                self.ax_distances.plot(z[: len(distance_curve)], distance_curve)
+        self.ax_distances.legend(legend)
+        self.fig.tight_layout()
 
