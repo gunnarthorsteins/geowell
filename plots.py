@@ -166,16 +166,6 @@ class GUI:
                 table._cells[cell]._loc = align
         set_align_for_column(table, col=0, align="left")
         set_align_for_column(table, col=1, align="right")
-        # def set_align_for_column(table, col, align="left"):
-        #     cells = [key for key in table._cells if key[1] == col]
-        #     for cell in cells:
-        #         table._cells[cell]._loc = align
-
-        # set_align_for_column(table, col=0, align="left")
-        # # set_align_for_column(table, col=1, align='left')
-        # for key, cell in table.get_celld().items():
-        #     if key[0] == 0 or key[1] == -1:
-        #         cell.weight = "extra bold"
 
     def plot_2d_trajectory(self, r: np.array, z: np.array, i: int):
         """[summary]
