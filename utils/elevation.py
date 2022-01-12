@@ -9,9 +9,10 @@ import numpy as np
 with open("config.json") as f:
     settings = json.load(f)
 locations = settings["locations_bbox"]
+RESOLUTION = settings["ELEVATION_RESOLUTION"]
+
 
 url_folder = "https://ftp.lmi.is/gisdata/raster/"
-RESOLUTION = 20
 url = f"{url_folder}IslandsDEMv1.0_{RESOLUTION}x{RESOLUTION}m_isn2016_zmasl.tif"
 
 

@@ -57,5 +57,6 @@
     "MESH_RESOLUTION": 50,
     "wells_filename": "data/wells.csv",
     "max_distance": 400,
-    "geothermal_area": "Reykjanes"
+    "geothermal_area": "Reykjanes",
+    "ELEVATION_RESOLUTION": 20
 }
