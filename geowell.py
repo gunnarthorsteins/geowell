@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from trajectory import Trajectory3d
-from distance import Distance
+from utils.trajectory import Trajectory3d
+from utils.distance import Distance
 from plots import GUI
 
 with open("config.json") as f:

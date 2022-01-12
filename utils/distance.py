@@ -1,11 +1,7 @@
 import json
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 from utils.interpolate import interpolate
-from tests import UnitTests
-from trajectory import Trajectory3d
 
 with open("config.json") as f:
     settings = json.load(f)
@@ -84,13 +80,4 @@ class Distance:
                 distances[well_name] = well_distance_temp
 
         return distances
-
-
-if __name__ == "__main__":
-    incumbent_wells = pd.read_csv(settings["wells_filename"])
-    trajectory_ = Trajectory3d()
-    x, y, _, z, _ = trajectory_.fork_r()
-    proposed_well = np.array((x, y, z)).T
-    distance_ = Distance(incumbent_wells, proposed_well)
-    UnitTests.test_distance(distance_)
 

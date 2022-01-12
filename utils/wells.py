@@ -1,8 +1,5 @@
 import json
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from tests import UnitTests
 
 with open("config.json") as f:
     settings = json.load(f)
@@ -10,7 +7,9 @@ locations = settings["locations_bbox"]
 
 
 class OpenSourceWells:
-    """Gets, processes, and saves the (open-source) coordinates of all wellheads in Reykjanes."""
+    """Downloads, processes, and saves the (open-source)
+    coordinates of all wellheads in Reykjanes.
+    """
 
     def download(self):
         """Downloads dataset from LMÍ.
@@ -26,23 +25,28 @@ class OpenSourceWells:
         wells in desired geothermal area.
 
         Args:
-            all_wells_in_iceland (pd.DataFrame): [description]
+            all_wells_in_iceland (pd.DataFrame): All wells in Iceland.
 
         Returns:
             (pd.DataFrame): All (currently available) wells
-                            in Reykjanes geothermal area.
+                            in settings["geothermal_area"]
         """
 
-        return all_wells_in_iceland[all_wells_in_iceland["SVAEDISNAFN"] == "Reykjanes"]
+        is_well_in_area = (
+            all_wells_in_iceland["SVAEDISNAFN"] == settings["geothermal_area"]
+        )
+
+        return all_wells_in_iceland[is_well_in_area]
 
     def process(self, wells_raw: pd.DataFrame):
         """Filters out unwanted columns and drops NaN values.
 
         Args:
-            wells (pd.DataFrame): [description]
+            wells (pd.DataFrame): All (currently available) wells
+                                  in settings["geothermal_area"]
 
         Returns:
-            (pd.DataFrame): A filtered version of the 
+            (pd.DataFrame): A filtered version of wells
         """
 
         wells = wells_raw[["Borholunofn", "x", "y", "MaxFDypi"]]
@@ -63,5 +67,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    UnitTests.test_wells(settings["wells_filename"])
+    main()

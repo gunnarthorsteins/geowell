@@ -2,8 +2,8 @@ import json
 import numpy as np
 import warnings
 
-from tests import UnitTests
 from utils.trigonometrics import cosd, sind, tand
+
 
 class Trajectory2d:
 
@@ -205,8 +205,3 @@ class Trajectory3d(Trajectory2d):
                 y[i] += delta_y
                 x[i] += delta_x
         return x, y, self.r, self.z, self.casing_split_index
-
-
-if __name__ == "__main__":
-    trajectory_ = Trajectory3d()
-    UnitTests.test_trajectory(trajectory_)

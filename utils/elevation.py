@@ -6,11 +6,17 @@ from osgeo import gdal
 import pandas as pd
 import numpy as np
 
-from tests import UnitTests
+with open("config.json") as f:
+    settings = json.load(f)
+locations = settings["locations_bbox"]
+
+url_folder = "https://ftp.lmi.is/gisdata/raster/"
+RESOLUTION = 20
+url = f"{url_folder}IslandsDEMv1.0_{RESOLUTION}x{RESOLUTION}m_isn2016_zmasl.tif"
 
 
 class Download:
-    """Downloads a map of Iceland and preprocesses."""
+    """Downloads an elevation map of Iceland and preprocesses."""
 
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
@@ -28,8 +34,6 @@ class Download:
                               Can be 10, 20 (default) or 50.
         """
 
-        url_folder = "https://ftp.lmi.is/gisdata/raster/"
-        url = f"{url_folder}IslandsDEMv1.0_{resolution}x{resolution}m_isn2016_zmasl.tif"
         request = requests.get(url, stream=True)
         if request.status_code != 200:
             return
@@ -77,11 +81,12 @@ class Process:
                                                          lrx, lry
         """
 
-        file = f"data/IslandsDEMv0_20x20m_zmasl_isn93.tif"
+        old_map = f"data/IslandsDEMv0_{RESOLUTION}x{RESOLUTION}m_zmasl_isn93.tif"
+        new_map = f"data/{self.location}.tif"
 
-        ds = gdal.Open(file)
+        ds = gdal.Open(old_map)
         ds = gdal.Translate(
-            file,
+            new_map,
             ds,
             projWin=[
                 self.coordinates["ulx"],
@@ -107,7 +112,7 @@ class Process:
 
         df = pd.read_csv(f"{file_loc}.xyz", sep=" ", names=["x", "y", "z"], header=0)
         os.remove(f"{file_loc}.xyz")
-        to_replace = -3.402823466385289e38  # don't know why...
+        to_replace = [-3.402823466385289e38, -9999.0]  # don't know why...
         df.replace(to_replace, 0, inplace=True)
 
         return df
@@ -128,7 +133,7 @@ class Process:
         return dict_
 
     def save(self, dict_):
-        with open(f"data/{self.location}2.json", "w") as f:
+        with open(f"data/{self.location}.json", "w") as f:
             json.dump(dict_, f)
 
     def run(self):
@@ -138,16 +143,3 @@ class Process:
         df = self.detiffify()
         dict_ = self.mesh(df)
         self.save(dict_)
-
-
-def main():
-    # Download(overwrite=True)
-    for location, coordinates in locations.items():
-        process = Process(location, coordinates)
-        process.run()
-        break  # Only want Reykjanes
-
-
-if __name__ == "__main__":
-    # main()
-    UnitTests.test_elevation()

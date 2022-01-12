@@ -1,1 +1,0 @@
-"""Calculates length of casing needed by well segment diameter"""
