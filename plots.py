@@ -27,12 +27,13 @@ class GUI:
 
         # Well distance
         self.ax_distances = self.fig.add_subplot(gs[-1, 0])
-        self.ax_distances.set_xlabel("Vertical Depth [m]")
+        self.ax_distances.set_ylabel("Vertical Depth [m]")
         well_name = settings["well_name"]
-        self.ax_distances.set_ylabel(
+        self.ax_distances.set_xlabel(
             f"Distance between {well_name}\nand other wells [m]"
         )
-        self.ax_distances.set_ylim([0, settings["max_distance"]])
+        self.ax_distances.set_xlim([0, settings["max_distance"]])
+        self.ax_distances.invert_yaxis()
         # self.ax_distances.spines['right'].set_visible(False)
         # self.ax_distances.spines['top'].set_visible(False)
 
@@ -154,14 +155,14 @@ class GUI:
             self.ax_3d.plot(
                 y_linspace, x_linspace, z_linspace, c="k", solid_capstyle="round"
             )
-            self.ax_3d.text(y[j], x[j], 0, name[j], c=settings["palette"]["gray"])
+            self.ax_3d.text(y[j], x[j], 0, name[j], c=settings["palette"]["gray"], fontsize=8)
 
     def plot_distances(self, distances: dict, z):
         legend = []
         for i, (well_name, distance_curve) in enumerate(distances.items()):
             if min(distance_curve) < 300:
                 legend.append(well_name)
-                self.ax_distances.plot(z[: len(distance_curve)], distance_curve)
+                self.ax_distances.plot(distance_curve, z[: len(distance_curve)])
         self.ax_distances.legend(legend)
         self.fig.tight_layout()
 

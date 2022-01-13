@@ -12,12 +12,12 @@ locations = settings["locations_bbox"]
 RESOLUTION = settings["ELEVATION_RESOLUTION"]
 
 
-url_folder = "https://ftp.lmi.is/gisdata/raster/"
-url = f"{url_folder}IslandsDEMv1.0_{RESOLUTION}x{RESOLUTION}m_isn2016_zmasl.tif"
+url_prefix = "https://ftp.lmi.is/gisdata/raster/"
+url = f"{url_prefix}IslandsDEMv1.0_{RESOLUTION}x{RESOLUTION}m_isn2016_zmasl.tif"
 
 
 class Download:
-    """Downloads an elevation map of Iceland and preprocesses."""
+    """Downloads and preprocesses an elevation map of Iceland."""
 
     def __init__(self, overwrite=False):
         self.overwrite = overwrite
@@ -44,8 +44,9 @@ class Download:
                 f.write(chunk)
 
     def _warp(self):
-        """Warps the original file from
-        ESPG:8088 (ISN2016) to ESPG:3057 (ISN93).
+        """Warps the original file.
+        
+        Warps from ESPG:8088 (ISN2016) to ESPG:3057 (ISN93).
         """
 
         ds = gdal.Open(self.filename)
@@ -58,7 +59,7 @@ class Download:
 
 
 class Process:
-    """Collects and prepares elevation raster data for plotting"""
+    """Collects and prepares elevation raster data for plotting."""
 
     def __init__(self, location, coordinates, overwrite=False):
         """
@@ -101,8 +102,8 @@ class Process:
     def detiffify(self):
         """Converts geotiff to df.
 
-        Args:
-            location (str): The location name
+        Returns:
+            pd.DataFrame: 
         """
 
         file_loc = f"data/{self.location}"

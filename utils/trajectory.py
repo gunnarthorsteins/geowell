@@ -2,17 +2,65 @@ import json
 import numpy as np
 import warnings
 
-from utils.trigonometrics import cosd, sind, tand
+
+class Trigonometrics:
+    """Degree-based trigonometric functions b/c np doesn't have it for some reason??"""
+
+    def cosd(deg: float):
+        """Calculates the cosine of an angle in *degrees*.
+
+        Args:
+            deg (float): The desired angle (in degrees)
+
+        Returns:
+            float: The cosine of the angle
+        """
+        return np.cos(np.deg2rad(deg))
+
+    def sind(deg):
+        """Calculates the sine of an angle in *degrees*.
+
+        Args:
+            deg (float): The desired angle (in degrees)
+
+        Returns:
+            float: The sine of the angle
+        """
+        return np.sin(np.deg2rad(deg))
+
+    def tand(deg):
+        """Calculates the tangent of an angle in *degrees*.
+
+        Args:
+            deg (float): The desired angle (in degrees)
+
+        Returns:
+            float: The tangent of the angle
+        """
+        return np.tan(np.deg2rad(deg))
+
+
+def get_index(a, b):
+    """Helper function for _get_casing_split. 
+
+    Args:
+        a (np.array): [description]
+        b (np.array): [description]
+
+    Returns:
+        (list): A list of boolean values
+    """
+    return sum(a < b)
 
 
 class Trajectory2d:
 
-    """Three legs:
+    """Generates 2D-trajectory of proposed well.
+    
+    Made up of three legs:
     1) Down to KOP
     2) Build-up
     3) Last leg to well bottom (straight)
-
-    (Leading underscore for class methods not intended for external calls)
     """
 
     def __init__(self):
@@ -30,19 +78,6 @@ class Trajectory2d:
         self.KOP = default_values["default_values"]["kop"]
         self.BU = default_values["default_values"]["bu"]
 
-    @staticmethod
-    def _get_index(a, b):
-        """Helper function for _get_casing_split. 
-
-        Args:
-            a (np.array): [description]
-            b (np.array): [description]
-
-        Returns:
-            (list): A list of boolean values
-        """
-        return sum(a < b)
-
     def _get_casing_split(self):
         """Finds the well trajectory index of the casing split.
 
@@ -53,16 +88,14 @@ class Trajectory2d:
         shifted_cd = self.CD - self.Z
 
         if self.CD <= self.KOP:  # Casing split on first leg
-            split_index = self._get_index(self.z, shifted_cd)
+            split_index = get_index(self.z, shifted_cd)
         # The +50 is b/c the vertical segment always
         # has a len of 50 which must be accounted for
         elif self.KOP < self.CD < self.len_buildup[-1]:  # Casing split on 2nd leg
-            split_index = self._get_index(self.len_buildup, shifted_cd) + 50
+            split_index = get_index(self.len_buildup, shifted_cd) + 50
         elif self.len_buildup[-1] < self.CD:  # Casing split on third leg
             split_index = (
-                len(self.len_buildup)
-                + self._get_index(self.len_slanted, shifted_cd)
-                + 50
+                len(self.len_buildup) + get_index(self.len_slanted, shifted_cd) + 50
             )
         else:
             warnings.warn("Check casing block")
@@ -101,8 +134,8 @@ class Trajectory2d:
         z_buildup[0] = end_z_vertical
         self.len_buildup[0] = end_z_vertical
         for i in range(1, self.DIP - 1):
-            r_buildup[i] = r_buildup[i - 1] + sind(i) / self.BU
-            z_buildup[i] = z_buildup[i - 1] + cosd(i) / self.BU
+            r_buildup[i] = r_buildup[i - 1] + Trigonometrics.sind(i) / self.BU
+            z_buildup[i] = z_buildup[i - 1] + Trigonometrics.cosd(i) / self.BU
             self.len_buildup[i] = self.len_buildup[i - 1] + 1 / self.BU
 
         return r_buildup, z_buildup
@@ -121,11 +154,11 @@ class Trajectory2d:
         """
 
         L2 = self.MMD - self.KOP - self.DIP / self.BU
-        r_slanted = np.linspace(end_r_buildup, L2 * sind(self.DIP))
-        vert = end_z_buildup + np.linspace(0, L2 * cosd(self.DIP))
+        r_slanted = np.linspace(end_r_buildup, L2 * Trigonometrics.sind(self.DIP))
+        vert = end_z_buildup + np.linspace(0, L2 * Trigonometrics.cosd(self.DIP))
         p = np.polyfit(r_slanted, vert, 1)
         z_zlanted = np.polyval(p, r_slanted)
-        self.len_slanted = z_zlanted / cosd(self.DIP)
+        self.len_slanted = z_zlanted / Trigonometrics.cosd(self.DIP)
 
         return r_slanted, z_zlanted
 
@@ -148,6 +181,11 @@ class Trajectory2d:
 
 
 class Trajectory3d(Trajectory2d):
+    """Generates a 3D trajectory by extrapolating from 2D trajectory.
+
+    Args:
+        Trajectory2d (class instance): 2D well trajectory
+    """    
     def __init__(self):
         super().__init__()
         self.r, self.z, self.casing_split_index = super().assemble()
@@ -164,8 +202,8 @@ class Trajectory3d(Trajectory2d):
             delta_y (float): north/southbound increment
         """
 
-        delta_y = r / np.sqrt(tand(self.AZ) ** 2 + 1)
-        delta_x = delta_y * tand(self.AZ)
+        delta_y = r / np.sqrt(Trigonometrics.tand(self.AZ) ** 2 + 1)
+        delta_x = delta_y * Trigonometrics.tand(self.AZ)
 
         # Only needed when working with WGS84 (lat/lon)
         # M_TO_DEG = 1.11e5  # m to deg on Earth's surface
@@ -176,7 +214,7 @@ class Trajectory3d(Trajectory2d):
         return delta_x, delta_y
 
     def fork_r(self):
-        """Forks vector r into x and y components.
+        """Forks array r into x and y components.
 
         Returns:
             x (np.array): east/westbound component
@@ -193,7 +231,7 @@ class Trajectory3d(Trajectory2d):
         # Special cases -> tand(az) = inf
         if self.AZ == 90 or self.AZ == 270:
             x += self.r
-            return x, y
+            return x, y, self.r, self.z, self.casing_split_index
 
         for i, r in enumerate(self.r):
             delta_x, delta_y = self._get_delta(r)

@@ -56,15 +56,3 @@ class OpenSourceWells:
 
     def save(self, wells: pd.DataFrame):
         wells.to_csv(settings["wells_filename"], index=False)
-
-
-def main():
-    wells_instance = OpenSourceWells()
-    all_wells_in_iceland = wells_instance.download()
-    wells_raw = wells_instance.filter_area(all_wells_in_iceland)
-    wells_df = wells_instance.process(wells_raw)
-    wells_instance.save(wells_df)
-
-
-if __name__ == "__main__":
-    main()

@@ -158,6 +158,7 @@ def _between_unit_tests():
     time.sleep(1)
     plt.close("all")
 
+
 def main():
     UnitTests.test_trajectory()
     _between_unit_tests()

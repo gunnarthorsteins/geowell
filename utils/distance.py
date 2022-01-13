@@ -1,10 +1,20 @@
 import json
 import numpy as np
 
-from utils.interpolate import interpolate
 
 with open("config.json") as f:
     settings = json.load(f)
+
+def interpolate(a, b):
+    """General table interpolation
+    Params:
+        a: 1x3 vector
+        b: 1x2 vector
+    
+    Returns:
+        interpolated value
+    """
+    return b[0] + (b[1] - b[0]) * (a[1] - a[0]) / (a[2] - a[0])
 
 
 class Distance:
@@ -14,12 +24,14 @@ class Distance:
         self.incumbent_wells = incumbent_wells
         self.proposed_well = proposed_well
 
-    def synthesize_values(
-        self, i_proposed: int, x_to_interpolate: float, y_to_interpolate: float
+    def _synthesize_values(
+        self, i_proposed: int, x_to_interpolate: list, y_to_interpolate: list
     ):
-        """Incumbent wells and proposed well don't usually have same z-linspaces.
-        This method bridges that by creating new x and y values for incumbents at depths
-        corresponding to the proposed well.
+        """Creates X & Y values at equal depths for proposed and incumbent wells.
+        
+        Incumbent wells and proposed well don't usually have same z-linspaces.
+        This method bridges that by creating new x and y values for incumbents
+        at depths corresponding to the proposed well.
 
         Args:
             i_reference (int): The proposed well depth index
@@ -42,7 +54,7 @@ class Distance:
 
         return x_interp, y_interp
 
-    def calculate_distance(self, x_interp, y_interp, i_proposed):
+    def _calculate_distance(self, x_interp, y_interp, i_proposed):
         # Calculate distance
         distance = np.sqrt(
             (x_interp - self.proposed_well[i_proposed, 0]) ** 2
@@ -55,7 +67,6 @@ class Distance:
         distances = dict()
         for _, well in self.incumbent_wells.iterrows():
             well_distance_temp = []
-            well_name = well["Borholunofn"]
             z_incumbent = np.linspace(
                 settings["default_values"]["Z"],
                 well["MaxFDypi"],
@@ -68,15 +79,16 @@ class Distance:
                         < self.proposed_well[i_proposed, 2]
                         < z_incumbent[k + 1]
                     ):
-                        x_interp, y_interp = self.synthesize_values(
+                        x_interp, y_interp = self._synthesize_values(
                             i_proposed=i_proposed,
                             x_to_interpolate=np.repeat(well["x"], 2),
                             y_to_interpolate=np.repeat(well["y"], 2),
                         )
                         well_distance_temp.append(
-                            self.calculate_distance(x_interp, y_interp, i_proposed)
+                            self._calculate_distance(x_interp, y_interp, i_proposed)
                         )
             if well_distance_temp:
+                well_name = well["Borholunofn"]
                 distances[well_name] = well_distance_temp
 
         return distances
