@@ -46,8 +46,6 @@ class GUI:
         self.ax_3d.invert_zaxis()
         self.ax_3d.dist = 8
         self.ax_3d.set_proj_type("ortho")
-        # self.ax_3d.set_ylim([373_000, 376_000])
-        # self.ax_3d.set_xlim([317_500, 319_500])
 
     def _2d_annotation(self):
         cell_text = list(
@@ -127,6 +125,7 @@ class GUI:
         x = np.array(elevation_data["x"])
         y = np.array(elevation_data["y"])
         z = np.array(elevation_data["z"])
+        # Reversed b/c z-axis is reversed
         cmap = matplotlib.cm.get_cmap("binary_r")
         self.ax_3d.plot_surface(
             y, x, -z, rstride=1, cstride=1, cmap=cmap, linewidth=1, alpha=0.5

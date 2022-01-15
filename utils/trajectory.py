@@ -1,6 +1,7 @@
 import json
-import numpy as np
 import warnings
+
+import numpy as np
 
 
 class Trigonometrics:
@@ -44,8 +45,8 @@ def get_index(a, b):
     """Helper function for _get_casing_split. 
 
     Args:
-        a (np.array): [description]
-        b (np.array): [description]
+        a (np.array): Left of leq-sign
+        b (np.array): Right of leq-sign
 
     Returns:
         (list): A list of boolean values
@@ -81,6 +82,8 @@ class Trajectory2d:
     def _get_casing_split(self):
         """Finds the well trajectory index of the casing split.
 
+        It's not very readable but does the job. TODO: Make actually readable.
+
         Returns:
             split_index (int): Index denoting where to split r & z
         """
@@ -90,7 +93,8 @@ class Trajectory2d:
         if self.CD <= self.KOP:  # Casing split on first leg
             split_index = get_index(self.z, shifted_cd)
         # The +50 is b/c the vertical segment always
-        # has a len of 50 which must be accounted for
+        # has a len of 50 (default linspace length - here build-up)
+        # which must be accounted for
         elif self.KOP < self.CD < self.len_buildup[-1]:  # Casing split on 2nd leg
             split_index = get_index(self.len_buildup, shifted_cd) + 50
         elif self.len_buildup[-1] < self.CD:  # Casing split on third leg
@@ -118,12 +122,16 @@ class Trajectory2d:
     def _buildup_leg(self, end_z_vertical):
         """Second leg - gradual incline buildup.
 
+        The leg is approximated as a series of multiple straight
+        segments with gradually increasing angle. It's much better to deal
+        with than making it actually curved.
+
         Args:
             end_z_vertical (float): Last z val of previous leg (r val is 0)
 
         Returns:
             r_buildup (np.array): Horizontal displacement,
-                                  perpendicular to azimuth
+                perpendicular to azimuth
             z_vertical (np.array): Vertical displacement
         """
 
@@ -163,11 +171,14 @@ class Trajectory2d:
         return r_slanted, z_zlanted
 
     def assemble(self):
-        """[summary]
+        """Concatenates the three legs.
 
         Returns:
-            [type]: [description]
+            r_total (np.array): The concatenated r-values
+            z_total (np.array): The concatenated z-values 
+            casing_split_index (int): The index where the casing ends
         """
+
         self.r, self.z = self._vertical_leg()
         if self.KOP:
             r2, z2 = self._buildup_leg(self.z[-1])
@@ -183,9 +194,13 @@ class Trajectory2d:
 class Trajectory3d(Trajectory2d):
     """Generates a 3D trajectory by extrapolating from 2D trajectory.
 
+    What it does is splitting the r-values from the Trajectory2d class
+    into x and y components by considering the azimuth.
+
     Args:
         Trajectory2d (class instance): 2D well trajectory
-    """    
+    """
+
     def __init__(self):
         super().__init__()
         self.r, self.z, self.casing_split_index = super().assemble()
@@ -219,8 +234,8 @@ class Trajectory3d(Trajectory2d):
         Returns:
             x (np.array): east/westbound component
             y (np.array): north/southbound component
-            r (np.array): sqrt(x^2 + y^2) -> For 2D plot
-            z (np.array): vertical component
+            r (np.array): The horizontal displacement. Used for 2D plot
+            z (np.array): Vertical component
             casing_split_index (int): casing split index,
                                       see Trajectory2d.get_casing_split()
         """

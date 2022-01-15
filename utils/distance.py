@@ -5,11 +5,13 @@ import numpy as np
 with open("config.json") as f:
     settings = json.load(f)
 
-def interpolate(a, b):
-    """General table interpolation
-    Params:
-        a: 1x3 vector
-        b: 1x2 vector
+
+def interpolate(a: list, b: list):
+    """General table interpolation.
+
+    Args:
+        a (list): Shape 1x3 
+        b (list): Shape 1x2. Interpolating for the value between b[0] and b[1]
     
     Returns:
         interpolated value
@@ -17,53 +19,80 @@ def interpolate(a, b):
     return b[0] + (b[1] - b[0]) * (a[1] - a[0]) / (a[2] - a[0])
 
 
+# TODO: Change incumbent wells from vertical (open-source) to closed-source
 class Distance:
-    """Calculates distance to nearest wells."""
+    """Calculates distance of proposed well to nearest incumbent wells.
+
+    Incumbent wells and proposed well don't usually have same z-linspaces.
+    This solves that by creating new x and y values for incumbents
+    at depths corresponding to the proposed well to be able to calculate
+    the horizontal distance between wells.
+    
+    Attributes:
+        incumbent_wells: A dict of 3D coordinates of all incumbent wells.
+            The format is well name as key, with x, y, and z coordinates
+            as nested keys
+        proposed_well: An array of the 3D coordinates of the proposed well
+    """
 
     def __init__(self, incumbent_wells, proposed_well):
         self.incumbent_wells = incumbent_wells
         self.proposed_well = proposed_well
 
-    def _synthesize_values(
-        self, i_proposed: int, x_to_interpolate: list, y_to_interpolate: list
-    ):
+    def _synthesize_values(self, index_proposed: int, value_to_interpolate: list):
         """Creates X & Y values at equal depths for proposed and incumbent wells.
-        
-        Incumbent wells and proposed well don't usually have same z-linspaces.
-        This method bridges that by creating new x and y values for incumbents
-        at depths corresponding to the proposed well.
 
         Args:
             i_reference (int): The proposed well depth index
-            x_to_interpolate (list): 1x2
-            y_to_interpolate (list): 1x2
+            value_to_interpolate (list): 1x2
 
         Returns:
-            x_interp (float): The interpolated x-value
-            y_interp (float): The interpolated y-value
+            interpolated_value (float): The interpolated value
         """
 
-        x_interp = interpolate(
-            a=self.proposed_well[i_proposed - 1 : i_proposed + 2, -1],
-            b=x_to_interpolate,
-        )
-        y_interp = interpolate(
-            a=self.proposed_well[i_proposed - 1 : i_proposed + 2, -1],
-            b=y_to_interpolate,
+        interpolated_value = interpolate(
+            a=self.proposed_well[index_proposed - 1 : index_proposed + 2, -1],
+            b=value_to_interpolate,
         )
 
-        return x_interp, y_interp
+        return interpolated_value
 
-    def _calculate_distance(self, x_interp, y_interp, i_proposed):
-        # Calculate distance
+    def _calculate_distance(self, x_interp, y_interp, index_proposed):
+        """Calculates the distance between two points on a 2D surface.
+
+        Calculates the L2-distance between two pairs of coordinates,
+        the one being of an incumbent well and the other for the proposed
+        well. The depths should be equal.
+
+        Args:
+            x_interp (float): The incumbent well's (synthesized) x-coordinate
+                at a depth corresponding to the prosed well's depth.
+            y_interp (float): The incumbent well's (synthesized) y-coordinate
+                at a depth corresponding to the prosed well's depth.
+            i_proposed ([type]): [description]
+
+        Returns:
+            distance (float): The L-2 distance between the two points.
+        """
+
         distance = np.sqrt(
-            (x_interp - self.proposed_well[i_proposed, 0]) ** 2
-            + (y_interp - self.proposed_well[i_proposed, 1]) ** 2
+            (x_interp - self.proposed_well[index_proposed, 0]) ** 2
+            + (y_interp - self.proposed_well[index_proposed, 1]) ** 2
         )
 
         return distance
 
     def run(self):
+        """High-level method for calculating distance between wells.
+
+        NOTE: To modify when proper well coordinates are received.
+
+        Returns:
+            distances (dict): Each key-value pair contains the distance
+                between an incumbent well (identified by key) and the
+                proposed well at every z-step of the proposed well
+        """
+
         distances = dict()
         for _, well in self.incumbent_wells.iterrows():
             well_distance_temp = []
@@ -72,20 +101,23 @@ class Distance:
                 well["MaxFDypi"],
                 len(self.proposed_well),
             )
-            for i_proposed in range(1, len(self.proposed_well) - 1):
+            for index_proposed in range(1, len(self.proposed_well) - 1):
                 for k in range(1, len(z_incumbent) - 1):
                     if (
                         z_incumbent[k]
-                        < self.proposed_well[i_proposed, 2]
+                        < self.proposed_well[index_proposed, 2]
                         < z_incumbent[k + 1]
                     ):
-                        x_interp, y_interp = self._synthesize_values(
-                            i_proposed=i_proposed,
-                            x_to_interpolate=np.repeat(well["x"], 2),
-                            y_to_interpolate=np.repeat(well["y"], 2),
+                        x_interp = self._synthesize_values(
+                            index_proposed=index_proposed,
+                            value_to_interpolate=np.repeat(well["x"], 2),
+                        )
+                        y_interp = self._synthesize_values(
+                            index_proposed=index_proposed,
+                            value_to_interpolate=np.repeat(well["y"], 2),
                         )
                         well_distance_temp.append(
-                            self._calculate_distance(x_interp, y_interp, i_proposed)
+                            self._calculate_distance(x_interp, y_interp, index_proposed)
                         )
             if well_distance_temp:
                 well_name = well["Borholunofn"]

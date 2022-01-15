@@ -1,0 +1,1 @@
+Explain the functionality, preferably through a diagram

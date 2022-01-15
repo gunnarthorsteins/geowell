@@ -1,10 +1,12 @@
-import os
 import json
-from scipy.interpolate import griddata
+import os
 import requests
+
 from osgeo import gdal
-import pandas as pd
 import numpy as np
+import pandas as pd
+from scipy.interpolate import griddata
+
 
 with open("config.json") as f:
     settings = json.load(f)
@@ -20,19 +22,16 @@ class Download:
     """Downloads and preprocesses an elevation map of Iceland."""
 
     def __init__(self, overwrite=False):
-        self.overwrite = overwrite
         self.filename = "data/iceland.tif"
-        if self.overwrite:
+        if overwrite:
             self._download()
             self._warp()
 
-    def _download(self, resolution=20):
-        """Downloads a raster map of Iceland from
-        The National Land Survey of Iceland.
-
-        Args:
-            resolution (int): elevation resolution [m].
-                              Can be 10, 20 (default) or 50.
+    def _download(self):
+        """Downloads a raster map of Iceland.
+        
+        The map is from Landmælingar Íslands.
+        The elevation resolution is set in config.json
         """
 
         request = requests.get(url, stream=True)
@@ -59,17 +58,16 @@ class Download:
 
 
 class Process:
-    """Collects and prepares elevation raster data for plotting."""
+    """Collects and prepares elevation raster data for plotting.
+    
+    Attributes:
+        location (str): Location name, see config.json
+        coordinates (dict): Location bounding box, see config.json
+        overwrite (bool, optional): Whether to overwrite existing surface
+            data or not. Defaults to False.
+    """
 
     def __init__(self, location, coordinates, overwrite=False):
-        """
-        Args:
-            location (str): Location name, see config
-            coordinates (dict): Location bounding box, see config
-            overwrite (bool, optional): Whether to overwrite existing surface
-                                        data or not. Defaults to False.
-        """
-
         self.overwrite = overwrite
         self.location = location
         self.coordinates = coordinates
@@ -77,10 +75,7 @@ class Process:
     def clip(self):
         """Clips the original map into smaller, more manageble pieces.
 
-        Args:
-            location (str): The location name
-            coordinates (dict): Two sets of coordinates: ulx, uly,
-                                                         lrx, lry
+        Does so by zooming in to the bbox, see config.json
         """
 
         old_map = f"data/IslandsDEMv0_{RESOLUTION}x{RESOLUTION}m_zmasl_isn93.tif"
@@ -102,8 +97,10 @@ class Process:
     def detiffify(self):
         """Converts geotiff to df.
 
+        Geotiffs are a little too cumbersome for this usage case.
+
         Returns:
-            pd.DataFrame: 
+            (pd.DataFrame): A dataframe of the elevation data
         """
 
         file_loc = f"data/{self.location}"
@@ -120,7 +117,14 @@ class Process:
         return df
 
     def mesh(self, df: pd.DataFrame):
-        """Generates a 3D mesh of elevation data."""
+        """Generates a 3D mesh of elevation data.
+        
+        Args:
+            df: The elevation data in table format
+
+        Returns:
+            dict_: The elevation data as a mesh
+        """
 
         # Create a 2D mesh grid
         xi = np.linspace(min(df.x), max(df.x), settings["MESH_RESOLUTION"])
@@ -139,7 +143,7 @@ class Process:
             json.dump(dict_, f)
 
     def run(self):
-        """Runs elevation data preprocessing."""
+        """High-level method for elevation data preprocessing."""
 
         self.clip()
         df = self.detiffify()
