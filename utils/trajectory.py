@@ -257,4 +257,5 @@ class Trajectory3d(Trajectory2d):
             else:
                 y[i] += delta_y
                 x[i] += delta_x
+                
         return x, y, self.r, self.z, self.casing_split_index
