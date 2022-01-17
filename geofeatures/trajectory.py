@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Trigonometrics:
-    """Degree-based trigonometric functions b/c np doesn't have it for some reason??"""
+    """Degree-based trigonometric functions b/c just.   """
 
     def cosd(deg: float):
         """Calculates the cosine of an angle in *degrees*.
@@ -62,22 +62,22 @@ class Trajectory2d:
     1) Down to KOP
     2) Build-up
     3) Last leg to well bottom (straight)
+
+    Attributes:
+        parameters: The well trajectory parameters.
+            See default_values in config.json 
     """
 
-    def __init__(self):
-
-        with open("config.json") as json_file:
-            default_values = json.load(json_file)
-
-        self.Y = default_values["default_values"]["Y"]
-        self.X = default_values["default_values"]["X"]
-        self.MMD = default_values["default_values"]["mmd"]
-        self.DIP = default_values["default_values"]["dip"]
-        self.Z = default_values["default_values"]["Z"]
-        self.AZ = default_values["default_values"]["az"]
-        self.CD = default_values["default_values"]["cd"]
-        self.KOP = default_values["default_values"]["kop"]
-        self.BU = default_values["default_values"]["bu"]
+    def __init__(self, parameters: dict):
+        self.Y = parameters["Y"]
+        self.X = parameters["X"]
+        self.MMD = parameters["mmd"]
+        self.DIP = parameters["dip"]
+        self.Z = parameters["Z"]
+        self.AZ = parameters["az"]
+        self.CD = parameters["cd"]
+        self.KOP = parameters["kop"]
+        self.BU = parameters["bu"]
 
     def _get_casing_split(self):
         """Finds the well trajectory index of the casing split.
@@ -157,7 +157,7 @@ class Trajectory2d:
 
         Returns:
             r_slanted (np.array): Horizontal displacement,
-                                  perpendicular to azimuth
+                perpendicular to azimuth
             z_slanted (np.array): Vertical displacement
         """
 
@@ -201,8 +201,8 @@ class Trajectory3d(Trajectory2d):
         Trajectory2d (class instance): 2D well trajectory
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parameters): 
+        super().__init__(parameters)
         self.r, self.z, self.casing_split_index = super().assemble()
 
     def _get_delta(self, r):

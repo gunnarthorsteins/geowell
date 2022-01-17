@@ -5,10 +5,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm
 
-from utils.elevation import Process
-from utils.wells import OpenSourceWells
-from utils.trajectory import Trajectory3d
-from utils.distance import Distance
+from geofeatures.elevation import Process
+from geofeatures.wells import OpenSourceWells
+from geofeatures.trajectory import Trajectory3d
+from geofeatures.distance import Distance
 
 
 with open("config.json") as f:
@@ -21,7 +21,7 @@ class UnitTests:
         print(f"{test} test complete")
 
     def test_trajectory():
-        trajectory_ = Trajectory3d()
+        trajectory_ = Trajectory3d(settings["default_values"])
         x, y, _, z, i = trajectory_.fork_r()
         UnitPlots.plot_3d_trajectory(x, y, z, i)
         UnitTests._write_test_results("trajectory")
@@ -51,7 +51,7 @@ class UnitTests:
         """
 
         incumbent_wells = pd.read_csv(settings["wells_filename"])
-        trajectory_ = Trajectory3d()
+        trajectory_ = Trajectory3d(settings["default_values"])
         x, y, _, z, _ = trajectory_.fork_r()
         proposed_well = np.array((x, y, z)).T
         distance_ = Distance(incumbent_wells, proposed_well)

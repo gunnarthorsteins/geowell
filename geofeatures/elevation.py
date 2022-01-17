@@ -138,9 +138,9 @@ class Process:
 
         return dict_
 
-    def save(self, dict_):
+    def _save(self, elevation_data: dict):
         with open(f"data/{self.location}.json", "w") as f:
-            json.dump(dict_, f)
+            json.dump(elevation_data, f)
 
     def run(self):
         """High-level method for elevation data preprocessing."""
@@ -148,4 +148,4 @@ class Process:
         self.clip()
         df = self.detiffify()
         dict_ = self.mesh(df)
-        self.save(dict_)
+        self._save(dict_)

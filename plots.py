@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm
 from matplotlib.gridspec import GridSpec
 
+
 with open("config.json") as f:
     settings = json.load(f)
 
@@ -32,7 +33,7 @@ class GUI:
         self.ax_distances.set_xlabel(
             f"Distance between {well_name}\nand other wells [m]"
         )
-        self.ax_distances.set_xlim([0, settings["max_distance"]])
+        self.ax_distances.set_xlim([0, settings["max_distance"] + 100])
         self.ax_distances.invert_yaxis()
         # self.ax_distances.spines['right'].set_visible(False)
         # self.ax_distances.spines['top'].set_visible(False)
@@ -158,10 +159,14 @@ class GUI:
 
     def plot_distances(self, distances: dict, z):
         legend = []
-        for i, (well_name, distance_curve) in enumerate(distances.items()):
-            if min(distance_curve) < 300:
+        no_of_wells_plotted = 0
+        for well_name, distance_curve in distances.items():
+            if min(distance_curve) < settings["max_distance"]:
+                no_of_wells_plotted += 1
                 legend.append(well_name)
                 self.ax_distances.plot(distance_curve, z[: len(distance_curve)])
+        if not no_of_wells_plotted:
+            self.ax_distances.text(100, 0.7, f'No wells at distance <{settings["max_distance"]} m', rotation=45)
         self.ax_distances.legend(legend)
         self.fig.tight_layout()
 

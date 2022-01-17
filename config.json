@@ -56,7 +56,7 @@
     "well_name": "RN-38",
     "MESH_RESOLUTION": 50,
     "wells_filename": "data/wells.csv",
-    "max_distance": 400,
+    "max_distance": 300,
     "geothermal_area": "Reykjanes",
     "ELEVATION_RESOLUTION": 20
 }

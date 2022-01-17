@@ -1,5 +1,5 @@
-from utils import elevation
-from utils import wells
+from geofeatures import elevation
+from geofeatures import wells
 
 elevation.Download()
 p = elevation.Process()

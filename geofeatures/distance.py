@@ -7,7 +7,7 @@ with open("config.json") as f:
 
 
 def interpolate(a: list, b: list):
-    """General table interpolation.
+    """General linear table interpolation.
 
     Args:
         a (list): Shape 1x3 
@@ -17,6 +17,12 @@ def interpolate(a: list, b: list):
         interpolated value
     """
     return b[0] + (b[1] - b[0]) * (a[1] - a[0]) / (a[2] - a[0])
+
+
+def generate_zs_for_incumbent_vertical_wells(well_depth, len_of_proposed_well):
+    return np.linspace(
+        settings["default_values"]["Z"], well_depth, len_of_proposed_well
+    )
 
 
 # TODO: Change incumbent wells from vertical (open-source) to closed-source
@@ -57,7 +63,9 @@ class Distance:
 
         return interpolated_value
 
-    def _calculate_distance(self, x_interp, y_interp, index_proposed):
+    def _calculate_distance(
+        self, x_interp: float, y_interp: float, index_proposed: int
+    ):
         """Calculates the distance between two points on a 2D surface.
 
         Calculates the L2-distance between two pairs of coordinates,
@@ -69,7 +77,7 @@ class Distance:
                 at a depth corresponding to the prosed well's depth.
             y_interp (float): The incumbent well's (synthesized) y-coordinate
                 at a depth corresponding to the prosed well's depth.
-            i_proposed ([type]): [description]
+            index_proposed (int): Index at the depth of the proposed well
 
         Returns:
             distance (float): The L-2 distance between the two points.
@@ -85,21 +93,20 @@ class Distance:
     def run(self):
         """High-level method for calculating distance between wells.
 
-        NOTE: To modify when proper well coordinates are received.
-
         Returns:
             distances (dict): Each key-value pair contains the distance
                 between an incumbent well (identified by key) and the
                 proposed well at every z-step of the proposed well
+
+        NOTE: To modify when proper well coordinates are received.                
         """
 
+        len_of_proposed_well = len(self.proposed_well)
         distances = dict()
         for _, well in self.incumbent_wells.iterrows():
             well_distance_temp = []
-            z_incumbent = np.linspace(
-                settings["default_values"]["Z"],
-                well["MaxFDypi"],
-                len(self.proposed_well),
+            z_incumbent = generate_zs_for_incumbent_vertical_wells(
+                well_depth=well["MaxFDypi"], len_of_proposed_well=len_of_proposed_well
             )
             for index_proposed in range(1, len(self.proposed_well) - 1):
                 for k in range(1, len(z_incumbent) - 1):
