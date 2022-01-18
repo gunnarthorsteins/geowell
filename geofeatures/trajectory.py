@@ -1,11 +1,18 @@
-import json
+import os
+import sys
 import warnings
 
 import numpy as np
 
+# To import from other parent directory in repo
+pwd = os.getcwd()
+sys.path.insert(0, pwd)
+
+from coordinate_conversion import Conversion
+
 
 class Trigonometrics:
-    """Degree-based trigonometric functions b/c just.   """
+    """Degree-based trigonometric functions just b/c"""
 
     def cosd(deg: float):
         """Calculates the cosine of an angle in *degrees*.
@@ -69,8 +76,6 @@ class Trajectory2d:
     """
 
     def __init__(self, parameters: dict):
-        self.Y = parameters["Y"]
-        self.X = parameters["X"]
         self.MMD = parameters["mmd"]
         self.DIP = parameters["dip"]
         self.Z = parameters["Z"]
@@ -78,6 +83,12 @@ class Trajectory2d:
         self.CD = parameters["cd"]
         self.KOP = parameters["kop"]
         self.BU = parameters["bu"]
+        if parameters["X"] < 300_000:
+            conversion_ = Conversion()
+            self.X, self.Y = conversion_.wgs_to_isn(parameters["X", "Y"])
+        else:
+            self.X = parameters["X"]
+            self.Y = parameters["Y"]
 
     def _get_casing_split(self):
         """Finds the well trajectory index of the casing split.
@@ -162,7 +173,8 @@ class Trajectory2d:
 
         slanted_leg_len = self.MMD - self.KOP - self.DIP / self.BU
         r_slanted = np.linspace(
-            end_r_buildup, end_r_buildup + slanted_leg_len * Trigonometrics.sind(self.DIP)
+            end_r_buildup,
+            end_r_buildup + slanted_leg_len * Trigonometrics.sind(self.DIP),
         )
         vert = end_z_buildup + np.linspace(
             0, slanted_leg_len * Trigonometrics.cosd(self.DIP)

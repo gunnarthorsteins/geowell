@@ -20,16 +20,17 @@ with open("config.json") as f:
 locations = settings["locations_bbox"]
 
 
-class UnitTests():
-    def _write_test_results(test):
-        print(f"{test} OK")
+def write_test_results(test):
+    print(f"{test} OK")
 
+
+class FigureTests:
     def test_trajectory():
         trajectory_ = Trajectory3d(settings["default_values"])
         x, y, r, z, i = trajectory_.fork_r()
         # UnitPlots.plot_2d_trajectory(r, z, i)
         UnitPlots.plot_3d_trajectory(x, y, z, i)
-        UnitTests._write_test_results("trajectory")
+        write_test_results("trajectory")
 
     def test_elevation():
         for location, coordinates in locations.items():
@@ -39,7 +40,7 @@ class UnitTests():
         with open(f"data/Reykjanes.json") as f:
             elevation_data = json.load(f)
         UnitPlots.plot_elevation_map(elevation_data)
-        UnitTests._write_test_results("elevation")
+        write_test_results("elevation")
 
     def test_wells():
         wells_ = OpenSourceWells()
@@ -48,7 +49,7 @@ class UnitTests():
         wells_df = wells_.process(wells_raw)
         wells_.save(wells_df)
         UnitPlots.plot_incumbent_wells(wells_df)
-        UnitTests._write_test_results("wells")
+        write_test_results("wells")
 
     def test_distance():
         """Cannot make completely independent of other modules
@@ -62,7 +63,7 @@ class UnitTests():
         distance_ = Distance(incumbent_wells, proposed_well)
         distances = distance_.run()
         UnitPlots.plot_distances(distances)
-        UnitTests._write_test_results("distance")
+        write_test_results("distance")
 
 
 class UnitPlots:
@@ -79,7 +80,7 @@ class UnitPlots:
         plt.plot(r[:i], z[:i], c="#ee2d36")
         plt.plot(r[i - 1 :], z[i - 1 :], c="#ee2d36")
         plt.gca().invert_yaxis()
-        plt.axis('equal')
+        plt.axis("equal")
         plt.show()
 
     def plot_3d_trajectory(x: np.array, y: np.array, z: np.array, i: int):
@@ -166,14 +167,14 @@ def _between_unit_tests():
 
 
 def main():
-    UnitTests.test_trajectory()
+    FigureTests.test_trajectory()
     _between_unit_tests()
-    # UnitTests.test_elevation()
-    # _between_unit_tests()
-    # UnitTests.test_wells()
-    # _between_unit_tests()
-    # UnitTests.test_distance()
-    # _between_unit_tests()
+    FigureTests.test_elevation()
+    _between_unit_tests()
+    FigureTests.test_wells()
+    _between_unit_tests()
+    FigureTests.test_distance()
+    _between_unit_tests()
 
 
 if __name__ == "__main__":
