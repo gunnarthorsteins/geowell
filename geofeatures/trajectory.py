@@ -123,8 +123,7 @@ class Trajectory2d:
         """Second leg - gradual incline buildup.
 
         The leg is approximated as a series of multiple straight
-        segments with gradually increasing angle. It's much better to deal
-        with than making it actually curved.
+        segments with gradually increasing angle, one segment for each degree.
 
         Args:
             end_z_vertical (float): Last z val of previous leg (r val is 0)
@@ -161,9 +160,13 @@ class Trajectory2d:
             z_slanted (np.array): Vertical displacement
         """
 
-        L2 = self.MMD - self.KOP - self.DIP / self.BU
-        r_slanted = np.linspace(end_r_buildup, L2 * Trigonometrics.sind(self.DIP))
-        vert = end_z_buildup + np.linspace(0, L2 * Trigonometrics.cosd(self.DIP))
+        slanted_leg_len = self.MMD - self.KOP - self.DIP / self.BU
+        r_slanted = np.linspace(
+            end_r_buildup, end_r_buildup + slanted_leg_len * Trigonometrics.sind(self.DIP)
+        )
+        vert = end_z_buildup + np.linspace(
+            0, slanted_leg_len * Trigonometrics.cosd(self.DIP)
+        )
         p = np.polyfit(r_slanted, vert, 1)
         z_zlanted = np.polyval(p, r_slanted)
         self.len_slanted = z_zlanted / Trigonometrics.cosd(self.DIP)
@@ -201,7 +204,7 @@ class Trajectory3d(Trajectory2d):
         Trajectory2d (class instance): 2D well trajectory
     """
 
-    def __init__(self, parameters): 
+    def __init__(self, parameters):
         super().__init__(parameters)
         self.r, self.z, self.casing_split_index = super().assemble()
 
@@ -257,5 +260,5 @@ class Trajectory3d(Trajectory2d):
             else:
                 y[i] += delta_y
                 x[i] += delta_x
-                
+
         return x, y, self.r, self.z, self.casing_split_index

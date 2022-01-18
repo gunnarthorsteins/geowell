@@ -4,11 +4,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm
+import warnings
 
 from geofeatures.elevation import Process
 from geofeatures.wells import OpenSourceWells
 from geofeatures.trajectory import Trajectory3d
 from geofeatures.distance import Distance
+
+# Suppressing an obnoxious mapping plotting warning
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 with open("config.json") as f:
@@ -16,13 +20,14 @@ with open("config.json") as f:
 locations = settings["locations_bbox"]
 
 
-class UnitTests:
+class UnitTests():
     def _write_test_results(test):
-        print(f"{test} test complete")
+        print(f"{test} OK")
 
     def test_trajectory():
         trajectory_ = Trajectory3d(settings["default_values"])
-        x, y, _, z, i = trajectory_.fork_r()
+        x, y, r, z, i = trajectory_.fork_r()
+        # UnitPlots.plot_2d_trajectory(r, z, i)
         UnitPlots.plot_3d_trajectory(x, y, z, i)
         UnitTests._write_test_results("trajectory")
 
@@ -74,6 +79,7 @@ class UnitPlots:
         plt.plot(r[:i], z[:i], c="#ee2d36")
         plt.plot(r[i - 1 :], z[i - 1 :], c="#ee2d36")
         plt.gca().invert_yaxis()
+        plt.axis('equal')
         plt.show()
 
     def plot_3d_trajectory(x: np.array, y: np.array, z: np.array, i: int):
@@ -88,7 +94,7 @@ class UnitPlots:
 
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(111, projection="3d")
-        ax.view_init(elev=90, azim=0)  # elev=90 & azim=0 sets a birds-eye initial view
+        # ax.view_init(elev=90, azim=0)  # elev=90 & azim=0 sets a birds-eye initial view
         ax.invert_zaxis()  # We want the z-axis to be reversed
         # ax.set_proj_type('ortho')
         ax.plot(x[:i], y[:i], z[:i], c="#ee2d36")
@@ -162,12 +168,12 @@ def _between_unit_tests():
 def main():
     UnitTests.test_trajectory()
     _between_unit_tests()
-    UnitTests.test_elevation()
-    _between_unit_tests()
-    UnitTests.test_wells()
-    _between_unit_tests()
-    UnitTests.test_distance()
-    _between_unit_tests()
+    # UnitTests.test_elevation()
+    # _between_unit_tests()
+    # UnitTests.test_wells()
+    # _between_unit_tests()
+    # UnitTests.test_distance()
+    # _between_unit_tests()
 
 
 if __name__ == "__main__":

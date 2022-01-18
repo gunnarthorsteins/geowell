@@ -31,7 +31,9 @@ Skjálftastaðsetningar
 
 Þekktar sprungur
 
-Setja tvívíddarútgáfu af öllu í vafra með `flask` eða `bokeh` og gera framendann meira í átt að GUI í stað 
+MT þekjur
+
+Setja tvívíddarútgáfu af öllu í vafra með `flask` eða `bokeh` og gera framendann meira í átt að GUI með sleðum og slíku í stað terminal-útgáfunnar sem þessi er. Þá gætu fleiri en einn starfsmaður prófað mismunandi parametra.
 
 Hafa gervihnattarmynd á tvívíðu korti (ekki skuggamyndina)
 
