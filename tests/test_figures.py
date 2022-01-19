@@ -1,10 +1,17 @@
+import os
+import sys
 import time
+
 import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm
 import warnings
+
+# To import from other parent directory in repo
+pwd = os.getcwd()
+sys.path.insert(0, pwd)
 
 from geofeatures.elevation import Process
 from geofeatures.wells import OpenSourceWells
@@ -62,7 +69,7 @@ class FigureTests:
         proposed_well = np.array((x, y, z)).T
         distance_ = Distance(incumbent_wells, proposed_well)
         distances = distance_.run()
-        UnitPlots.plot_distances(distances)
+        UnitPlots.plot_distances(distances=distances, z=z)
         write_test_results("distance")
 
 
@@ -155,11 +162,20 @@ class UnitPlots:
         ax.invert_zaxis()  # We want the z-axis to be reversed
         plt.show()
 
-    def plot_distances(distances: dict):
+    def plot_distances(distances: dict, z):
+        fig, ax = plt.subplots()
+        legend = []
+        no_of_wells_plotted = 0
         for well_name, distance_curve in distances.items():
-            plt.plot(distance_curve)
+            if min(distance_curve) < settings["max_distance"]:
+                no_of_wells_plotted += 1
+                legend.append(well_name)
+                ax.plot(distance_curve, z[: len(distance_curve)])
+        if not no_of_wells_plotted:
+            ax.text(100, 0.7, f'No wells at distance <{settings["max_distance"]} m', rotation=45)
+        ax.invert_yaxis()
+        ax.legend(legend)
         plt.show()
-
 
 def _between_unit_tests():
     time.sleep(1)
@@ -167,12 +183,12 @@ def _between_unit_tests():
 
 
 def main():
-    FigureTests.test_trajectory()
-    _between_unit_tests()
-    FigureTests.test_elevation()
-    _between_unit_tests()
-    FigureTests.test_wells()
-    _between_unit_tests()
+    # FigureTests.test_trajectory()
+    # _between_unit_tests()
+    # FigureTests.test_elevation()
+    # _between_unit_tests()
+    # FigureTests.test_wells()
+    # _between_unit_tests()
     FigureTests.test_distance()
     _between_unit_tests()
 

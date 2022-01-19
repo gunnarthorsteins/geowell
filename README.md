@@ -37,7 +37,7 @@ Hér höfum við forrit sem dregur upp gagnvirkt líkan af mögulegum holuferli,
 
 - MT þekjur
 
-- Vikmörk holuferils
+- Vikmörk holuferils. Mikilvægt tól við mat á fjarlægð til annarra hola
 
 - Logger sem vistar screenshot af öllum parametrum sem prófaðir eru
 
