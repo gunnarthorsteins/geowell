@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm
+from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 
 
@@ -58,17 +59,27 @@ class GUI:
         )
         col_labels = ["param", "val", "unit"]
         table = self.ax_2d.table(
-            cellText=cell_text, colLabels=col_labels, loc="upper right", edges="open",
+            cellText=cell_text,
+            colLabels=col_labels,
+            loc="upper right",
+            edges="open",
+            colLoc="right",
         )
+        for (row, col), cell in table.get_celld().items():
+            if (row == 0) or (col == -1):
+                cell.set_text_props(fontproperties=FontProperties(weight="bold"))
+            if col == 0 or col == 2:
+                cell.set_text_props(ha="left")
+
+        # def set_align_for_column(table, col, align):
+        #     cells = [key for key in table._cells if key[1] == col]
+        #     for cell in cells:
+        #         table._cells[cell]._loc = align
+
+        # set_align_for_column(table, col=0, align="left")
+        # set_align_for_column(table, col=1, align="right")
+
         table.auto_set_column_width([0, 1, 2])
-
-        def set_align_for_column(table, col, align):
-            cells = [key for key in table._cells if key[1] == col]
-            for cell in cells:
-                table._cells[cell]._loc = align
-
-        set_align_for_column(table, col=0, align="left")
-        set_align_for_column(table, col=1, align="right")
 
     def plot_2d_trajectory(self, r: np.array, z: np.array, i: int):
         """[summary]
@@ -155,7 +166,9 @@ class GUI:
             self.ax_3d.plot(
                 y_linspace, x_linspace, z_linspace, c="k", solid_capstyle="round"
             )
-            self.ax_3d.text(y[j], x[j], 0, name[j], c=settings["palette"]["blue"], fontsize=8)
+            self.ax_3d.text(
+                y[j], x[j], 0, name[j], c=settings["palette"]["blue"], fontsize=8
+            )
 
     def plot_distances(self, distances: dict, z, CASING_DEPTH_ABSOLUTE):
         legend = []
@@ -166,9 +179,16 @@ class GUI:
                 legend.append(well_name)
                 self.ax_distances.plot(distance_curve, z[: len(distance_curve)])
         if not no_of_wells_plotted:
-            self.ax_distances.text(100, 0.7, f'No wells at distance <{settings["max_distance"]} m', rotation=45)
+            self.ax_distances.text(
+                100,
+                0.7,
+                f'No wells at distance <{settings["max_distance"]} m',
+                rotation=45,
+            )
         else:
-            self.ax_distances.hlines(CASING_DEPTH_ABSOLUTE, 0, 1000, color='k', linestyles='dashed')
+            self.ax_distances.hlines(
+                CASING_DEPTH_ABSOLUTE, 0, 1000, color="k", linestyles="dashed"
+            )
         self.ax_distances.legend(legend)
         self.fig.tight_layout()
 
