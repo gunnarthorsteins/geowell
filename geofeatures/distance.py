@@ -26,7 +26,7 @@ def generate_zs_for_incumbent_vertical_wells(well_depth, len_of_proposed_well):
 
 
 # TODO: Change incumbent wells from vertical (open-source) to closed-source
-# TODO: Visualize casing in distance plotting
+# TODO: Visualize casing of incumbents in distance plotting
 class Distance:
     """Calculates distance of proposed well to nearest incumbent wells.
 

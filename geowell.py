@@ -56,7 +56,10 @@ def geowell(**custom_params):
     proposed_well = np.array((x, y, z)).T
     distance_ = Distance(incumbent_wells, proposed_well)
     distances = distance_.run()
-    gui.plot_distances(distances, z, CASING_DEPTH_ABSOLUTE=parameters["cd"] - parameters["Z"])
+    CASING_DEPTH_ABSOLUTE = z[casing_index] - settings["default_values"]["Z"]
+    gui.plot_distances(
+        distances, z, CASING_DEPTH_ABSOLUTE=CASING_DEPTH_ABSOLUTE
+    )
 
     plt.show()
 
