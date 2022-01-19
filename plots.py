@@ -24,8 +24,6 @@ class GUI:
         self.ax_2d.set_xlabel("Horizontal throw [m]")
         self.ax_2d.xaxis.tick_top()
         self.ax_2d.xaxis.set_label_position("top")
-        # self.ax_2d.spines['right'].set_visible(False)
-        # self.ax_2d.spines['bottom'].set_visible(False)
 
         # Well distance
         self.ax_distances = self.fig.add_subplot(gs[-1, 0])
@@ -36,8 +34,6 @@ class GUI:
         )
         self.ax_distances.set_xlim([0, settings["max_distance"] + 100])
         self.ax_distances.invert_yaxis()
-        # self.ax_distances.spines['right'].set_visible(False)
-        # self.ax_distances.spines['top'].set_visible(False)
 
         # 3D Map
         self.ax_3d = self.fig.add_subplot(gs[:, 1:3], projection="3d")
@@ -65,19 +61,12 @@ class GUI:
             edges="open",
             colLoc="right",
         )
+        # Column alignment
         for (row, col), cell in table.get_celld().items():
             if (row == 0) or (col == -1):
                 cell.set_text_props(fontproperties=FontProperties(weight="bold"))
             if col == 0 or col == 2:
                 cell.set_text_props(ha="left")
-
-        # def set_align_for_column(table, col, align):
-        #     cells = [key for key in table._cells if key[1] == col]
-        #     for cell in cells:
-        #         table._cells[cell]._loc = align
-
-        # set_align_for_column(table, col=0, align="left")
-        # set_align_for_column(table, col=1, align="right")
 
         table.auto_set_column_width([0, 1, 2])
 
@@ -105,7 +94,6 @@ class GUI:
             linewidth=3,
             solid_capstyle="round",
         )
-        # self.ax_2d.set_title('Perpendicular view')
 
     def plot_3d_trajectory(self, x: np.array, y: np.array, z: np.array, i: int):
         """[summary]
